@@ -45,6 +45,7 @@ class Viewer:
         pg.init()
         pg.display.set_mode((W,H), DOUBLEBUF|OPENGL)
         pg.display.set_caption("INFOMR Viewer")
+        pg.key.set_repeat(int(1000 / FPS))
 
         # Set the perspective and move the "camera" back
         gluPerspective(FOV, (W/H), Z_NEAR, Z_FAR)
@@ -64,6 +65,10 @@ class Viewer:
                     mouse_x, mouse_y = event.pos
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
+                if event.button == 4:
+                    glTranslatef(0, 0, 0.05)
+                if event.button == 5:
+                    glTranslatef(0, 0, -0.05)
             elif event.type == pg.MOUSEBUTTONUP:
                 # Stop dragging
                 if event.button == 1:
@@ -75,7 +80,15 @@ class Viewer:
                     # TODO: Look at this, can this be improved?
                     glRotate((abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, (mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0)
                     self.mouse_x = mouse_x
-                    self.mouse_y = mouse_y
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_w:
+                    glTranslatef(0, -0.05, 0)
+                if event.key == pg.K_s:
+                    glTranslatef(0, 0.05, 0)
+                if event.key == pg.K_a:
+                    glTranslatef(0.05, 0, 0)
+                if event.key == pg.K_d:
+                    glTranslatef(-0.05, 0, 0)
 
     def mainLoop(self):
         while True:
