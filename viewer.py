@@ -7,6 +7,7 @@ import trimesh
 import pygame as pg
 from pygame.locals import *
 import numpy as np
+import math
 
 # Define constants
 W, H = 800, 600
@@ -28,9 +29,9 @@ def compute_normal(triangle: np.ndarray):
 
     v1, v2, v3 = triangle
 
-    print(triangle)
+    # print(triangle)
     normal = normalize_vector(np.cross(v2 - v1, v3 - v1))
-    print(normal)
+    # print(normal)
 
     return normalize_vector(np.cross(v2 - v1, v3 - v1))
 
@@ -43,15 +44,29 @@ def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0.0, 0.0, 0
     # Each face consists of exactly three vertices
     for face in mesh.faces:
         triangle = np.array([mesh.vertices[vi] for vi in face])
-        glNormal3fv(compute_normal(triangle))
 
+        face_normal = compute_normal(triangle)
         for vertex_index in face:
             # Get the vertex and render it, adjusted for the center of the object
             v = mesh.vertices[vertex_index]
-            glColor3fv(color)
+            # glColor3fv(color)
+            glNormal3fv(face_normal)
             glVertex3fv(v - center)
     # Draw the object
     glEnd()
+
+def map_hemisphere(x,y):
+    z = math.sqrt(abs(1-math.pow(x,2)-math.pow(y,2)))
+    return z
+
+# Calculate angle of two spatial vectors
+
+def angle_calculation(a,b):
+    print(a,b)
+    r = math.degrees(math.acos((np.dot(a, b))/(np.linalg.norm(a)*np.linalg.norm(b) + 0.0000001)))
+
+    return r
+
 
 class Viewer:
     # Initializer for the Viewer
@@ -64,6 +79,7 @@ class Viewer:
         self.drag = False
         self.mouse_x = 0
         self.mouse_y = 0
+        self.p1 = []
 
         # Initialize a window
         pg.init()
@@ -72,8 +88,12 @@ class Viewer:
         pg.key.set_repeat(int(1000 / FPS))
 
         # Set the perspective and move the "camera" back
+        glMatrixMode(GL_PROJECTION)
         gluPerspective(FOV, (W/H), Z_NEAR, Z_FAR)
         glTranslatef(0.0, 0.0, DISTANCE)
+
+        self.a = (GLfloat * 16)()
+        self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
 
     # Handle pygame events
     def handleEvents(self):
@@ -89,6 +109,8 @@ class Viewer:
                     mouse_x, mouse_y = event.pos
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
+                    norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
+                    self.p1 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
                 # Scroll down
                 if event.button == 4:
                     glScalef(*SCALE_UP_FACTOR)
@@ -103,9 +125,17 @@ class Viewer:
                 # Turn dragging motion into object rotation
                 if self.drag:
                     mouse_x, mouse_y = event.pos
+
                     # TODO: Look at this, can this be improved?
                     glRotate((abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, (mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0)
+                    norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
+                    p2 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
+                    # cist = np.cross(self.p1, p2)
+                    axis = (p2[0]- self.p1[0], p2[1]- self.p1[1])
+                    # glRotatef( angle_calculation(self.p1,p2), axis[1], axis[0], 0)
+                    self.p1 = p2
                     self.mouse_x = mouse_x
+                    self.mouse_y = mouse_y
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_w:
                     glTranslatef(0, -0.05, 0)
@@ -118,12 +148,21 @@ class Viewer:
 
     def mainLoop(self):
         while True:
-            self.handleEvents()
-            self.clock.tick(FPS)
+
 
             # Clear the window
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+            glMatrixMode(GL_MODELVIEW)
+            glLoadIdentity()
+            self.handleEvents()
+            self.clock.tick(FPS)
+            glMultMatrixf(self.modelMat)
+            self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
+
+
+            glEnable(GL_DEPTH_TEST)
+            glDepthFunc(GL_LESS)
             # TODO: Fix this
             glShadeModel(GL_SMOOTH)
             light = np.array([5, 5, 5, 0])
@@ -131,10 +170,15 @@ class Viewer:
             glEnable(GL_LIGHT0)
             glLightfv(GL_LIGHT0, GL_POSITION, light)
             glEnable(GL_COLOR_MATERIAL)
-            glColor3f(0, 1, 0)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            glColor3f(0.5, 0.5, 0.5)
+            # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
             renderMesh(self.mesh, self.mesh_center)
+
+            glLoadIdentity()
+            glTranslatef(0,0.0,-10000)
+            glMultMatrixf(self.modelMat)
+
 
             # Render to window
             pg.display.flip()
