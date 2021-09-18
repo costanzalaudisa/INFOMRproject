@@ -5,6 +5,7 @@ from OpenGL.GL import *
 import trimesh
 import pygame as pg
 from pygame.locals import *
+import numpy as np
 
 # Define constants
 W, H = 800, 600
@@ -14,7 +15,7 @@ Z_NEAR, Z_FAR = 0.1, 50.0
 FPS = 60
 
 # Render a mesh from the center of the screen
-def renderMesh(mesh: trimesh.Trimesh, center: Tuple[float, float, float] = (0, 0, 0), color: Tuple[float, float, float] = (1.0, 1.0, 1.0)):
+def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0, 0, 0]), color: Tuple[float, float, float] = (1.0, 1.0, 1.0)):
     # Assume all faces are triangles
     glBegin(GL_TRIANGLES)
 
@@ -23,9 +24,9 @@ def renderMesh(mesh: trimesh.Trimesh, center: Tuple[float, float, float] = (0, 0
     for face in mesh.faces:
         for vertex_index in face:
             # Get the vertex and render it, adjusted for the center of the object
-            x, y, z = mesh.vertices[vertex_index]
+            v = mesh.vertices[vertex_index]
             glColor3fv(color)
-            glVertex3f(x - center[0], y - center[1], z - center[2])
+            glVertex3fv(v - center)
     # Draw the object
     glEnd()
 
