@@ -2,6 +2,7 @@ from typing import Tuple
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+from numpy.linalg import norm
 import trimesh
 import pygame as pg
 from pygame.locals import *
@@ -17,6 +18,22 @@ SCALE_FACTOR = 1.1
 SCALE_UP_FACTOR = np.ones(3) * SCALE_FACTOR
 SCALE_DOWN_FACTOR = np.ones(3) / SCALE_FACTOR
 
+def normalize_vector(v: np.ndarray):
+    return v / np.linalg.norm(v)
+
+def compute_normal(triangle: np.ndarray):
+    # Triangle consists of three vertices
+    if len(triangle) != 3:
+        raise Error("Someething other than a triangle was passed")
+
+    v1, v2, v3 = triangle
+
+    print(triangle)
+    normal = normalize_vector(np.cross(v2 - v1, v3 - v1))
+    print(normal)
+
+    return normalize_vector(np.cross(v2 - v1, v3 - v1))
+
 # Render a mesh from the center of the screen
 def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0.0, 0.0, 0.0]), color: np.ndarray = np.array([1.0, 1.0, 1.0])):
     # Assume all faces are triangles
@@ -25,6 +42,9 @@ def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0.0, 0.0, 0
     # Go through each of the faces
     # Each face consists of exactly three vertices
     for face in mesh.faces:
+        triangle = np.array([mesh.vertices[vi] for vi in face])
+        glNormal3fv(compute_normal(triangle))
+
         for vertex_index in face:
             # Get the vertex and render it, adjusted for the center of the object
             v = mesh.vertices[vertex_index]
@@ -103,6 +123,17 @@ class Viewer:
 
             # Clear the window
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+            # TODO: Fix this
+            glShadeModel(GL_SMOOTH)
+            light = np.array([5, 5, 5, 0])
+            glEnable(GL_LIGHTING)
+            glEnable(GL_LIGHT0)
+            glLightfv(GL_LIGHT0, GL_POSITION, light)
+            glEnable(GL_COLOR_MATERIAL)
+            glColor3f(0, 1, 0)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
             renderMesh(self.mesh, self.mesh_center)
 
             # Render to window
