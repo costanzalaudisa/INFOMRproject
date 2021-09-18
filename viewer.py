@@ -130,7 +130,7 @@ class Viewer:
                     mouse_x, mouse_y = event.pos
 
                     # TODO: Look at this, can this be improved?
-                    glRotate((abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, (mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0)
+                    # glRotate((abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, (mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0)
                     norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
                     p2 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
                     # cist = np.cross(self.p1, p2)
