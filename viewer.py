@@ -13,9 +13,12 @@ FOV = 45
 DISTANCE = -3
 Z_NEAR, Z_FAR = 0.1, 50.0
 FPS = 60
+SCALE_FACTOR = 1.1
+SCALE_UP_FACTOR = np.ones(3) * SCALE_FACTOR
+SCALE_DOWN_FACTOR = np.ones(3) / SCALE_FACTOR
 
 # Render a mesh from the center of the screen
-def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0, 0, 0]), color: Tuple[float, float, float] = (1.0, 1.0, 1.0)):
+def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0.0, 0.0, 0.0]), color: np.ndarray = np.array([1.0, 1.0, 1.0])):
     # Assume all faces are triangles
     glBegin(GL_TRIANGLES)
 
@@ -32,7 +35,7 @@ def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0, 0, 0]), 
 
 class Viewer:
     # Initializer for the Viewer
-    def __init__(self, mesh: trimesh.Trimesh, mesh_center: Tuple[float, float, float] = (0, 0, 0)):
+    def __init__(self, mesh: trimesh.Trimesh, mesh_center: np.ndarray = np.array([0.0, 0.0, 0.0])):
         self.mesh = mesh
         self.mesh_center = mesh_center
 
@@ -66,10 +69,12 @@ class Viewer:
                     mouse_x, mouse_y = event.pos
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
+                # Scroll down
                 if event.button == 4:
-                    glTranslatef(0, 0, 0.05)
+                    glScalef(*SCALE_UP_FACTOR)
+                # Scroll up
                 if event.button == 5:
-                    glTranslatef(0, 0, -0.05)
+                    glScalef(*SCALE_DOWN_FACTOR)
             elif event.type == pg.MOUSEBUTTONUP:
                 # Stop dragging
                 if event.button == 1:
