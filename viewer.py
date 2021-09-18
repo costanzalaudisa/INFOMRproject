@@ -18,6 +18,8 @@ FPS = 60
 SCALE_FACTOR = 1.1
 SCALE_UP_FACTOR = np.ones(3) * SCALE_FACTOR
 SCALE_DOWN_FACTOR = np.ones(3) / SCALE_FACTOR
+MOVE_X = np.array([0.05, 0, 0])
+MOVE_Y = np.array([0, 0.05, 0])
 
 def normalize_vector(v: np.ndarray):
     return v / np.linalg.norm(v)
@@ -79,7 +81,8 @@ class Viewer:
         self.drag = False
         self.mouse_x = 0
         self.mouse_y = 0
-        self.p1 = []
+        self.p1 = (0.0, 0.0, 0.0)
+        self.position = np.array([0.0, 0.0, 0.0])
 
         # Initialize a window
         pg.init()
@@ -131,25 +134,21 @@ class Viewer:
                     norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
                     p2 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
                     # cist = np.cross(self.p1, p2)
-                    axis = (p2[0]- self.p1[0], p2[1]- self.p1[1])
-                    # glRotatef( angle_calculation(self.p1,p2), axis[1], axis[0], 0)
                     self.p1 = p2
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_w:
-                    glTranslatef(0, -0.05, 0)
+                    self.position -= np.array(MOVE_Y)
                 if event.key == pg.K_s:
-                    glTranslatef(0, 0.05, 0)
+                    self.position += np.array(MOVE_Y)
                 if event.key == pg.K_a:
-                    glTranslatef(0.05, 0, 0)
+                    self.position += np.array(MOVE_X)
                 if event.key == pg.K_d:
-                    glTranslatef(-0.05, 0, 0)
+                    self.position -= np.array(MOVE_X)
 
     def mainLoop(self):
         while True:
-
-
             # Clear the window
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -157,8 +156,8 @@ class Viewer:
             glLoadIdentity()
             self.handleEvents()
             self.clock.tick(FPS)
-            glMultMatrixf(self.modelMat)
-            self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
+            # glMultMatrixf(self.modelMat)
+            # self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
 
 
             glEnable(GL_DEPTH_TEST)
@@ -171,14 +170,17 @@ class Viewer:
             glLightfv(GL_LIGHT0, GL_POSITION, light)
             glEnable(GL_COLOR_MATERIAL)
             glColor3f(0.5, 0.5, 0.5)
-            # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
+            glTranslatef(*self.position)
+            axis = (self.p1[0], self.p1[1])
+            glRotatef( angle_calculation(np.array([0.0, 0.0, 0.0]), self.p1), axis[1], axis[0], 0)
             renderMesh(self.mesh, self.mesh_center)
 
             glLoadIdentity()
             glTranslatef(0,0.0,-10000)
-            glMultMatrixf(self.modelMat)
 
+            glMultMatrixf(self.modelMat)
 
             # Render to window
             pg.display.flip()
