@@ -1,13 +1,13 @@
-from typing import Tuple
+import numpy as np
+import pygame as pg
+
+from pygame.locals import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
-from numpy.linalg import norm
-import trimesh
-import pygame as pg
-from pygame.locals import *
-import numpy as np
-import math
+
+from utils import normalize_vector
+from object import Object
 
 # Define constants
 W, H = 800, 600
@@ -16,73 +16,22 @@ DISTANCE = -3
 Z_NEAR, Z_FAR = 0.1, 50.0
 FPS = 60
 SCALE_FACTOR = 1.1
-SCALE_UP_FACTOR = np.ones(3) * SCALE_FACTOR
-SCALE_DOWN_FACTOR = np.ones(3) / SCALE_FACTOR
 MOVE_X = np.array([0.05, 0, 0])
 MOVE_Y = np.array([0, 0.05, 0])
 
-def normalize_vector(v: np.ndarray):
-    return v / np.linalg.norm(v)
-
-def compute_normal(triangle: np.ndarray):
-    # Triangle consists of three vertices
-    if len(triangle) != 3:
-        raise Error("Someething other than a triangle was passed")
-
-    v1, v2, v3 = triangle
-
-    # print(triangle)
-    normal = normalize_vector(np.cross(v2 - v1, v3 - v1))
-    # print(normal)
-
-    return normalize_vector(np.cross(v2 - v1, v3 - v1))
-
-# Render a mesh from the center of the screen
-def renderMesh(mesh: trimesh.Trimesh, center: np.ndarray = np.array([0.0, 0.0, 0.0]), color: np.ndarray = np.array([1.0, 1.0, 1.0])):
-    # Assume all faces are triangles
-    glBegin(GL_TRIANGLES)
-
-    # Go through each of the faces
-    # Each face consists of exactly three vertices
-    for face in mesh.faces:
-        triangle = np.array([mesh.vertices[vi] for vi in face])
-
-        face_normal = compute_normal(triangle)
-        for vertex_index in face:
-            # Get the vertex and render it, adjusted for the center of the object
-            v = mesh.vertices[vertex_index]
-            # glColor3fv(color)
-            glNormal3fv(face_normal)
-            glVertex3fv(v - center)
-    # Draw the object
-    glEnd()
-
-def map_hemisphere(x,y):
-    z = math.sqrt(abs(1-math.pow(x,2)-math.pow(y,2)))
-    return z
-
-# Calculate angle of two spatial vectors
-
-def angle_calculation(a,b):
-    print(a,b)
-    r = math.degrees(math.acos((np.dot(a, b))/(np.linalg.norm(a)*np.linalg.norm(b) + 0.0000001)))
-
-    return r
-
-
 class Viewer:
     # Initializer for the Viewer
-    def __init__(self, mesh: trimesh.Trimesh, mesh_center: np.ndarray = np.array([0.0, 0.0, 0.0])):
-        self.mesh = mesh
-        self.mesh_center = mesh_center
-
+    def __init__(self, object: Object):
         # Set veriables to be used within the viewer
+        self.object = object
         self.clock = pg.time.Clock()
         self.drag = False
         self.mouse_x = 0
         self.mouse_y = 0
-        self.p1 = (0.0, 0.0, 0.0)
+
+        self.scale = np.array([1.0, 1.0, 1.0])
         self.position = np.array([0.0, 0.0, 0.0])
+        self.rotation = (0.0, np.array([0.0, 0.0, 0.0]))
 
         # Initialize a window
         pg.init()
@@ -112,29 +61,26 @@ class Viewer:
                     mouse_x, mouse_y = event.pos
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
-                    norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
-                    self.p1 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
                 # Scroll down
                 if event.button == 4:
-                    glScalef(*SCALE_UP_FACTOR)
+                    self.scale *= SCALE_FACTOR
                 # Scroll up
                 if event.button == 5:
-                    glScalef(*SCALE_DOWN_FACTOR)
+                    self.scale /= SCALE_FACTOR
             elif event.type == pg.MOUSEBUTTONUP:
                 # Stop dragging
                 if event.button == 1:
                     self.drag = False
+                    self.rotation = (self.rotation[0] % 360, normalize_vector(self.rotation[1]))
             elif event.type == pg.MOUSEMOTION:
                 # Turn dragging motion into object rotation
                 if self.drag:
                     mouse_x, mouse_y = event.pos
 
                     # TODO: Look at this, can this be improved?
-                    # glRotate((abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, (mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0)
-                    norm_mouse_pos = (2*self.mouse_x/W-1,2*mouse_y/H-1,map_hemisphere(2*mouse_x/W-1,2*mouse_y/H-1))
-                    p2 = (norm_mouse_pos[0],norm_mouse_pos[1],map_hemisphere(norm_mouse_pos[0],norm_mouse_pos[1]))
-                    # cist = np.cross(self.p1, p2)
-                    self.p1 = p2
+                    self.rotation = (self.rotation[0] + (abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, self.rotation[1] + np.array([(mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0.0]))
+
+                    # Reset previous mouse position
                     self.mouse_x = mouse_x
                     self.mouse_y = mouse_y
             elif event.type == pg.KEYDOWN:
@@ -152,35 +98,36 @@ class Viewer:
             # Clear the window
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+            # Reset view
             glMatrixMode(GL_MODELVIEW)
             glLoadIdentity()
+
+            # Handle all pygame events
             self.handleEvents()
+
+            # Limit FPS
             self.clock.tick(FPS)
-            # glMultMatrixf(self.modelMat)
-            # self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
 
-
+            # Enable depth rendering
+            # E.g. renders faces that are closer to the camera over ones that are further back
             glEnable(GL_DEPTH_TEST)
             glDepthFunc(GL_LESS)
-            # TODO: Fix this
+
+            # Enable light shading
             glShadeModel(GL_SMOOTH)
-            light = np.array([5, 5, 5, 0])
             glEnable(GL_LIGHTING)
             glEnable(GL_LIGHT0)
-            glLightfv(GL_LIGHT0, GL_POSITION, light)
+            glLightfv(GL_LIGHT0, GL_POSITION, np.array([5, 5, 5, 0]))
             glEnable(GL_COLOR_MATERIAL)
-            glColor3f(0.5, 0.5, 0.5)
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
+            # Perform transformations
+            glScalef(*self.scale)
             glTranslatef(*self.position)
-            axis = (self.p1[0], self.p1[1])
-            glRotatef( angle_calculation(np.array([0.0, 0.0, 0.0]), self.p1), axis[1], axis[0], 0)
-            renderMesh(self.mesh, self.mesh_center)
+            glRotatef(self.rotation[0], *self.rotation[1])
 
-            glLoadIdentity()
-            glTranslatef(0,0.0,-10000)
-
-            glMultMatrixf(self.modelMat)
+            # Render the object
+            self.object.render()
 
             # Render to window
             pg.display.flip()
