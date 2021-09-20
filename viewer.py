@@ -1,5 +1,6 @@
-import numpy as np
 import pygame as pg
+import numpy as np
+import math
 
 from pygame.locals import *
 from OpenGL.GLUT import *
@@ -25,13 +26,12 @@ class Viewer:
         # Set veriables to be used within the viewer
         self.object = object
         self.clock = pg.time.Clock()
-        self.drag = False
-        self.mouse_x = 0
-        self.mouse_y = 0
 
         self.scale = np.array([1.0, 1.0, 1.0])
         self.position = np.array([0.0, 0.0, 0.0])
         self.rotation = (0.0, np.array([0.0, 0.0, 0.0]))
+        self.angle_x = 0
+        self.angle_y = 0
 
         # Initialize a window
         pg.init()
@@ -55,12 +55,6 @@ class Viewer:
                 pg.quit()
                 quit()
             elif event.type == pg.MOUSEBUTTONDOWN:
-                # Start dragging and set previous mouse location
-                if event.button == 1:
-                    self.drag = True
-                    mouse_x, mouse_y = event.pos
-                    self.mouse_x = mouse_x
-                    self.mouse_y = mouse_y
                 # Scroll down
                 if event.button == 4:
                     self.scale *= SCALE_FACTOR
@@ -70,19 +64,23 @@ class Viewer:
             elif event.type == pg.MOUSEBUTTONUP:
                 # Stop dragging
                 if event.button == 1:
-                    self.drag = False
                     self.rotation = (self.rotation[0] % 360, normalize_vector(self.rotation[1]))
             elif event.type == pg.MOUSEMOTION:
-                # Turn dragging motion into object rotation
-                if self.drag:
-                    mouse_x, mouse_y = event.pos
+                # If LMB is held
+                if event.buttons[0]:
+                    # Turn dragging motion into object rotation
+                    diff_x, diff_y = event.rel
 
-                    # TODO: Look at this, can this be improved?
-                    self.rotation = (self.rotation[0] + (abs(mouse_x - self.mouse_x) + abs(mouse_y - self.mouse_y)) / 2, self.rotation[1] + np.array([(mouse_y - self.mouse_y), (mouse_x - self.mouse_x), 0.0]))
+                    self.angle_x += diff_x
+                    self.angle_y += diff_y
 
-                    # Reset previous mouse position
-                    self.mouse_x = mouse_x
-                    self.mouse_y = mouse_y
+                # If RMB is held
+                if event.buttons[2]:
+                    # Turn dragging motion into object panning
+                    diff_x, diff_y = event.rel
+
+                    self.position += MOVE_X * diff_x / self.scale[0] / 10
+                    self.position -= MOVE_Y * diff_y / self.scale[0] / 10
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_w:
                     self.position -= np.array(MOVE_Y)
@@ -124,7 +122,8 @@ class Viewer:
             # Perform transformations
             glScalef(*self.scale)
             glTranslatef(*self.position)
-            glRotatef(self.rotation[0], *self.rotation[1])
+            glRotatef(self.angle_x, 0.0, 1.0, 0.0)
+            glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
 
             # Render the object
             self.object.render()
