@@ -7,8 +7,8 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
+from object import Object, RenderMethod
 from utils import normalize_vector
-from object import Object
 
 # Define constants
 W, H = 800, 600
@@ -109,15 +109,9 @@ class Viewer:
             # Enable depth rendering
             # E.g. renders faces that are closer to the camera over ones that are further back
             glEnable(GL_DEPTH_TEST)
-            glDepthFunc(GL_LESS)
 
-            # Enable light shading
-            glShadeModel(GL_SMOOTH)
-            glEnable(GL_LIGHTING)
-            glEnable(GL_LIGHT0)
-            glLightfv(GL_LIGHT0, GL_POSITION, np.array([5, 5, 5, 0]))
-            glEnable(GL_COLOR_MATERIAL)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+            # Enable proper scaling
+            glEnable(GL_NORMALIZE)
 
             # Perform transformations
             glScalef(*self.scale)
@@ -126,7 +120,7 @@ class Viewer:
             glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
 
             # Render the object
-            self.object.render()
+            self.object.render(RenderMethod.FLAT)
 
             # Render to window
             pg.display.flip()
