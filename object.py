@@ -1,6 +1,7 @@
 import numpy as np
 import trimesh
 
+from OpenGL.arrays import vbo
 from pathlib import Path
 from OpenGL.GL import *
 from enum import Enum
@@ -8,8 +9,7 @@ from enum import Enum
 class RenderMethod(Enum):
     FLAT = 0
     SMOOTH = 1
-    WIREFRAME = 2
-    POINT_CLOUD = 3
+    POINT_CLOUD = 2
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, center: np.ndarray = None, color: np.ndarray = np.array([0.5, 0.5, 0.5]), line_color: np.ndarray = np.array([0.3, 0.3, 0.3])):
@@ -32,19 +32,23 @@ class Object:
         self.rotation = (0.0, np.array([0.0, 0.0, 0.0]))
         self.scale = np.array([1.0, 1.0, 1.0])
 
-    def render(self, method: RenderMethod = RenderMethod.FLAT):
-        if method == RenderMethod.WIREFRAME or method == RenderMethod.POINT_CLOUD:
-            glPointSize(2)
-        else:
-            glEnable(GL_LIGHTING)
-            glEnable(GL_LIGHT0)
-            # glLightfv(GL_LIGHT0, GL_POSITION, np.array([5, 5, 5, 0]))
-            # glEnable(GL_COLOR_MATERIAL)
-            glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
-            glShadeModel(GL_SMOOTH)
+        # Define and fill buffer objects
+        self.vertices = np.array([v - self.center for v in self.mesh.vertices], dtype="f")
+        self.vertex_buffer = vbo.VBO(self.vertices)
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        self.vertex_normals = np.array(self.mesh.vertex_normals, dtype="f")
+        self.vertex_normal_buffer = vbo.VBO(self.vertex_normals)
 
+        self.faces = np.array(self.mesh.faces, dtype=np.int32)
+        self.face_buffer = vbo.VBO(self.faces, target=GL_ELEMENT_ARRAY_BUFFER)
+
+        self.vertex_count = self.vertices.size
+        self.face_vertex_count = self.faces.size
+
+    def __del__(self):
+        glDeleteBuffers(1, [self.vertex_buffer, self.vertex_normal_buffer, self.face_buffer])
+
+    def render(self, method: RenderMethod = RenderMethod.FLAT, wireframe: bool = False):
         # Start local transform
         glPushMatrix()
 
@@ -52,50 +56,63 @@ class Object:
         glTranslatef(*self.position)
         glRotatef(self.rotation[0], *self.rotation[1])
 
-        if method == RenderMethod.WIREFRAME or method == RenderMethod.POINT_CLOUD:
-            # Draw as seperate points
-            glBegin(GL_POINTS)
-        else:
-            # Assume all faces are triangles
-            glBegin(GL_TRIANGLES)
+        # Lighting
+        glEnable(GL_LIGHTING)
+        if method == RenderMethod.FLAT:
+            glShadeModel(GL_FLAT)
+        elif method == RenderMethod.SMOOTH:
+            glShadeModel(GL_SMOOTH)
+        glEnable(GL_COLOR_MATERIAL)
+
+        glEnable(GL_LIGHT0)
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
         # Set the color of the object
         glColor3f(*self.color)
 
-        # Draw all the vertices
-        self.draw_vertices(method)
+        # Bind VBOs
+        self.face_buffer.bind()
 
-        # Draw the object
-        glEnd()
+        glEnableClientState(GL_VERTEX_ARRAY)
+        self.vertex_buffer.bind()
+        glVertexPointer(3, GL_FLOAT, 0, None)
+
+        glEnableClientState(GL_NORMAL_ARRAY)
+        self.vertex_normal_buffer.bind()
+        glNormalPointer(GL_FLOAT, 0, 0)
+
+        if method == RenderMethod.POINT_CLOUD:
+            # Draw as seperate points
+            glPointSize(3)
+            glDrawArrays(GL_POINTS, 0, self.vertex_count)
+        else:
+            # Assume all faces are triangles
+            glDrawElements(GL_TRIANGLES, self.face_vertex_count, GL_UNSIGNED_INT, None)
 
         # If wireframe was selected, also draw the lines between vertices
-        if method == RenderMethod.WIREFRAME:
+        if wireframe:
+            glPushMatrix()
+            glDisable(GL_LIGHTING)
+            glDisable(GL_LIGHT0)
+            glShadeModel(GL_FLAT)
+            glLineWidth(2)
             glColor3f(*self.line_color)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            glBegin(GL_TRIANGLES)
-            self.draw_vertices(method)
-            glEnd()
+            glDrawElements(GL_TRIANGLES, self.face_vertex_count, GL_UNSIGNED_INT, None)
+            glPopMatrix()
+
+        glDisableClientState(GL_NORMAL_ARRAY)
+        glDisableClientState(GL_VERTEX_ARRAY)
+
+        # Unbind VBOs
+        self.face_buffer.unbind()
+        self.vertex_buffer.unbind()
+        self.vertex_normal_buffer.unbind()
 
         # End local transform
         glPopMatrix()
-
-    def draw_vertices(self, method: RenderMethod):
-        # Go through each of the faces
-        # Each face consists of exactly three vertices
-        for i in range(len(self.mesh.faces)):
-            face = self.mesh.faces[i]
-
-            for vi in face:
-                # Push normal vector to vector buffer
-                if method == RenderMethod.FLAT:
-                    face_normal = self.mesh.face_normals[i]
-                    glNormal3f(*face_normal)
-                elif method == RenderMethod.SMOOTH:
-                    vertex_normal =  self.mesh.vertex_normals[vi]
-                    glNormal3f(*vertex_normal)
-
-                # Push the vertex to vertex buffer, adjusted for the center of the object
-                glVertex3f(*(self.mesh.vertices[vi] - self.center))
 
     def load_mesh(path: Path):
         # Load a mesh and return it as an Object

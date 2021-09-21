@@ -44,14 +44,12 @@ class Viewer:
         gluPerspective(FOV, (W/H), Z_NEAR, Z_FAR)
         glTranslatef(0.0, 0.0, DISTANCE)
 
-        self.a = (GLfloat * 16)()
-        self.modelMat = glGetFloatv(GL_MODELVIEW_MATRIX, self.a)
-
     # Handle pygame events
     def handleEvents(self):
         for event in pg.event.get():
             # Close window when the red X is pressed
             if event.type == pg.QUIT:
+                del self.object
                 pg.quit()
                 quit()
             elif event.type == pg.MOUSEBUTTONDOWN:
@@ -120,7 +118,7 @@ class Viewer:
             glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
 
             # Render the object
-            self.object.render(RenderMethod.FLAT)
+            self.object.render(RenderMethod.SMOOTH, True)
 
             # Render to window
             pg.display.flip()
