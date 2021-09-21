@@ -118,7 +118,7 @@ class Viewer:
             glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
 
             # Render the object
-            self.object.render(RenderMethod.SMOOTH, True)
+            self.object.render(RenderMethod.NO_SHADING, True)
 
             # Render to window
             pg.display.flip()

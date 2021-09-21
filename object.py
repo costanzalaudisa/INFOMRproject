@@ -1,3 +1,4 @@
+from utils import normalize_vector
 import numpy as np
 import trimesh
 
@@ -9,7 +10,8 @@ from enum import Enum
 class RenderMethod(Enum):
     FLAT = 0
     SMOOTH = 1
-    POINT_CLOUD = 2
+    NO_SHADING = 2
+    POINT_CLOUD = 3
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, center: np.ndarray = None, color: np.ndarray = np.array([0.5, 0.5, 0.5]), line_color: np.ndarray = np.array([0.3, 0.3, 0.3])):
@@ -56,17 +58,19 @@ class Object:
         glTranslatef(*self.position)
         glRotatef(self.rotation[0], *self.rotation[1])
 
-        # Lighting
-        glEnable(GL_LIGHTING)
-        if method == RenderMethod.FLAT:
-            glShadeModel(GL_FLAT)
-        elif method == RenderMethod.SMOOTH:
-            glShadeModel(GL_SMOOTH)
-        glEnable(GL_COLOR_MATERIAL)
+        if method != RenderMethod.NO_SHADING:
+            # Lighting
+            glEnable(GL_LIGHTING)
+            if method == RenderMethod.FLAT:
+                glShadeModel(GL_FLAT)
+            elif method == RenderMethod.SMOOTH:
+                glShadeModel(GL_SMOOTH)
+            glEnable(GL_COLOR_MATERIAL)
 
-        glEnable(GL_LIGHT0)
-        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
+            glEnable(GL_LIGHT0)
+            glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
 
+        # Set polygon mode to fill polygons both from the front and back
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
         # Set the color of the object
@@ -77,11 +81,11 @@ class Object:
 
         glEnableClientState(GL_VERTEX_ARRAY)
         self.vertex_buffer.bind()
-        glVertexPointer(3, GL_FLOAT, 0, None)
+        glVertexPointerf(self.vertex_buffer)
 
         glEnableClientState(GL_NORMAL_ARRAY)
         self.vertex_normal_buffer.bind()
-        glNormalPointer(GL_FLOAT, 0, 0)
+        glNormalPointerf(self.vertex_normal_buffer)
 
         if method == RenderMethod.POINT_CLOUD:
             # Draw as seperate points
@@ -93,16 +97,26 @@ class Object:
 
         # If wireframe was selected, also draw the lines between vertices
         if wireframe:
+            # Locally change options
             glPushMatrix()
             glDisable(GL_LIGHTING)
             glDisable(GL_LIGHT0)
             glShadeModel(GL_FLAT)
             glLineWidth(2)
+
+            # Set color
             glColor3f(*self.line_color)
+
+            # Set polygon mode to lines
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
+            # Draw the lines
             glDrawElements(GL_TRIANGLES, self.face_vertex_count, GL_UNSIGNED_INT, None)
+
+            # End local transform
             glPopMatrix()
 
+        # Clean up
         glDisableClientState(GL_NORMAL_ARRAY)
         glDisableClientState(GL_VERTEX_ARRAY)
 
