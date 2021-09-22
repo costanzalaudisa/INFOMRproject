@@ -1,6 +1,7 @@
 import pygame as pg
 import numpy as np
 import math
+import time
 
 from pygame.locals import *
 from OpenGL.GLUT import *
@@ -38,7 +39,7 @@ class Viewer:
 
         # Initialize a window
         pg.init()
-        pg.display.set_mode((W,H), DOUBLEBUF|OPENGL|pg.RESIZABLE)
+        pg.display.set_mode((W,H), DOUBLEBUF|OPENGL|RESIZABLE)
         pg.display.set_caption("INFOMR Viewer")
         pg.key.set_repeat(int(1000 / FPS))
 
@@ -114,6 +115,13 @@ class Viewer:
                         print("Enabled wireframe")
                     else:
                         print("Disabled wireframe")
+                if event.key == pg.K_F12 and not self.keys_pressed_last_frame[pg.K_F12]:
+                    window_size = pg.display.get_window_size()
+                    screen_buffer = glReadPixels(0, 0, *window_size, GL_RGBA, GL_UNSIGNED_BYTE)
+                    screen = pg.image.fromstring(screen_buffer, window_size, "RGBA", 1)
+
+                    t = time.localtime(time.time())
+                    pg.image.save(screen, f"screenshots/{t.tm_year:04d}-{t.tm_mon:02d}-{t.tm_mday:02d}_{t.tm_hour:02d}.{t.tm_min:02d}.{t.tm_sec:02d}.png")
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
@@ -124,18 +132,18 @@ class Viewer:
 
     def mainLoop(self):
         while True:
+            # Handle all pygame events
+            self.handleEvents()
+
+            # Limit FPS
+            self.clock.tick(FPS)
+
             # Clear the window
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
             # Reset view
             glMatrixMode(GL_MODELVIEW)
             glLoadIdentity()
-
-            # Handle all pygame events
-            self.handleEvents()
-
-            # Limit FPS
-            self.clock.tick(FPS)
 
             # Enable depth rendering
             # E.g. renders faces that are closer to the camera over ones that are further back
