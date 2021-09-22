@@ -26,12 +26,15 @@ class Viewer:
         # Set veriables to be used within the viewer
         self.object = object
         self.clock = pg.time.Clock()
+        self.keys_pressed_last_frame = []
 
         self.scale = np.array([1.0, 1.0, 1.0])
         self.position = np.array([0.0, 0.0, 0.0])
         self.rotation = (0.0, np.array([0.0, 0.0, 0.0]))
         self.angle_x = 0
         self.angle_y = 0
+        self.render_method = RenderMethod.FLAT
+        self.wireframe = True
 
         # Initialize a window
         pg.init()
@@ -88,6 +91,31 @@ class Viewer:
                     self.position += np.array(MOVE_X)
                 if event.key == pg.K_d:
                     self.position -= np.array(MOVE_X)
+                if event.key == pg.K_1 and not self.keys_pressed_last_frame[pg.K_1]:
+                    self.render_method = RenderMethod.POINT_CLOUD
+                    self.timer = 0
+                    print("Point cloud")
+                if event.key == pg.K_2 and not self.keys_pressed_last_frame[pg.K_2]:
+                    self.render_method = RenderMethod.NO_SHADING
+                    self.timer = 0
+                    print("No shading")
+                if event.key == pg.K_3 and not self.keys_pressed_last_frame[pg.K_3]:
+                    self.render_method = RenderMethod.FLAT
+                    self.timer = 0
+                    print("Flat shading")
+                if event.key == pg.K_4 and not self.keys_pressed_last_frame[pg.K_4]:
+                    self.render_method = RenderMethod.SMOOTH
+                    self.timer = 0
+                    print("Smooth shading")
+                if event.key == pg.K_e and not self.keys_pressed_last_frame[pg.K_e]:
+                    self.wireframe = not self.wireframe
+                    self.timer = 0
+                    if self.wireframe:
+                        print("Enabled wireframe")
+                    else:
+                        print("Disabled wireframe")
+
+        self.keys_pressed_last_frame = pg.key.get_pressed()
 
     def mainLoop(self):
         while True:
@@ -118,7 +146,7 @@ class Viewer:
             glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
 
             # Render the object
-            self.object.render(RenderMethod.NO_SHADING, True)
+            self.object.render(self.render_method, self.wireframe)
 
             # Render to window
             pg.display.flip()
