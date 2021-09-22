@@ -38,7 +38,7 @@ class Viewer:
 
         # Initialize a window
         pg.init()
-        pg.display.set_mode((W,H), DOUBLEBUF|OPENGL)
+        pg.display.set_mode((W,H), DOUBLEBUF|OPENGL|pg.RESIZABLE)
         pg.display.set_caption("INFOMR Viewer")
         pg.key.set_repeat(int(1000 / FPS))
 
@@ -114,6 +114,11 @@ class Viewer:
                         print("Enabled wireframe")
                     else:
                         print("Disabled wireframe")
+            if event.type == pg.VIDEORESIZE:
+                glMatrixMode(GL_PROJECTION)
+                glLoadIdentity()
+                gluPerspective(FOV, (event.w/event.h), Z_NEAR, Z_FAR)
+                glTranslatef(0.0, 0.0, DISTANCE)
 
         self.keys_pressed_last_frame = pg.key.get_pressed()
 
