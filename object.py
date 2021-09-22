@@ -47,6 +47,45 @@ class Object:
         self.vertex_count = self.vertices.size
         self.face_vertex_count = self.faces.size
 
+        #--------------#
+        # Flat shading #
+        #--------------#
+        self.flat_vertices = []
+        self.flat_vertex_normals = []
+        self.flat_faces = []
+
+        # Duplicate all vertices by how many faces include it
+        # such that all vertices have the face normal as its normal
+        v_i = 0
+        for i, face in enumerate(self.faces):
+            face_normal = self.mesh.face_normals[i]
+
+            verts = [self.vertices[vi] for vi in face]
+
+            face = []
+
+            for v in verts:
+                self.flat_vertices.append(v)
+                self.flat_vertex_normals.append(face_normal)
+                face.append(v_i)
+
+                v_i += 1
+
+            self.flat_faces.append(face)
+
+        # Define and fill buffer objects for flat shading
+        self.flat_vertices = np.array(self.flat_vertices, dtype="f")
+        self.flat_vertex_buffer = vbo.VBO(self.flat_vertices)
+
+        self.flat_vertex_normals = np.array(self.flat_vertex_normals, dtype="f")
+        self.flat_vertex_normal_buffer = vbo.VBO(self.flat_vertex_normals)
+
+        self.flat_faces = np.array(self.flat_faces, dtype=np.int32)
+        self.flat_face_buffer = vbo.VBO(self.flat_faces, target=GL_ELEMENT_ARRAY_BUFFER)
+
+        self.flat_vertex_count = self.flat_vertices.size
+        self.flat_face_vertex_count = self.flat_faces.size
+
     def __del__(self):
         glDeleteBuffers(1, [self.vertex_buffer, self.vertex_normal_buffer, self.face_buffer])
 
@@ -77,15 +116,26 @@ class Object:
         glColor3f(*self.color)
 
         # Bind VBOs
-        self.face_buffer.bind()
+        if method == RenderMethod.FLAT:
+            self.flat_face_buffer.bind()
 
-        glEnableClientState(GL_VERTEX_ARRAY)
-        self.vertex_buffer.bind()
-        glVertexPointerf(self.vertex_buffer)
+            glEnableClientState(GL_VERTEX_ARRAY)
+            self.flat_vertex_buffer.bind()
+            glVertexPointerf(self.flat_vertex_buffer)
 
-        glEnableClientState(GL_NORMAL_ARRAY)
-        self.vertex_normal_buffer.bind()
-        glNormalPointerf(self.vertex_normal_buffer)
+            glEnableClientState(GL_NORMAL_ARRAY)
+            self.flat_vertex_normal_buffer.bind()
+            glNormalPointerf(self.flat_vertex_normal_buffer)
+        else:
+            self.face_buffer.bind()
+
+            glEnableClientState(GL_VERTEX_ARRAY)
+            self.vertex_buffer.bind()
+            glVertexPointerf(self.vertex_buffer)
+
+            glEnableClientState(GL_NORMAL_ARRAY)
+            self.vertex_normal_buffer.bind()
+            glNormalPointerf(self.vertex_normal_buffer)
 
         if method == RenderMethod.POINT_CLOUD:
             # Draw as seperate points
@@ -121,9 +171,14 @@ class Object:
         glDisableClientState(GL_VERTEX_ARRAY)
 
         # Unbind VBOs
-        self.face_buffer.unbind()
-        self.vertex_buffer.unbind()
-        self.vertex_normal_buffer.unbind()
+        if method == RenderMethod.FLAT:
+            self.flat_face_buffer.unbind()
+            self.flat_vertex_buffer.unbind()
+            self.flat_vertex_normal_buffer.unbind()
+        else:
+            self.face_buffer.unbind()
+            self.vertex_buffer.unbind()
+            self.vertex_normal_buffer.unbind()
 
         # End local transform
         glPopMatrix()
