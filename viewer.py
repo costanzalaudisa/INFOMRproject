@@ -122,6 +122,9 @@ class Viewer:
 
                     t = time.localtime(time.time())
                     pg.image.save(screen, f"screenshots/{t.tm_year:04d}-{t.tm_mon:02d}-{t.tm_mday:02d}_{t.tm_hour:02d}.{t.tm_min:02d}.{t.tm_sec:02d}.png")
+                if event.key == pg.K_r and not self.keys_pressed_last_frame[pg.K_r]:
+                    self.angle_x = round(self.angle_x / 15) * 15
+                    self.angle_y = round(self.angle_y / 15) * 15
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
