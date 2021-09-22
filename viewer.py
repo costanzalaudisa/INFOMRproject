@@ -36,6 +36,7 @@ class Viewer:
         self.angle_y = 0
         self.render_method = RenderMethod.FLAT
         self.wireframe = True
+        self.axis_shown = False
 
         # Initialize a window
         pg.init()
@@ -110,11 +111,16 @@ class Viewer:
                     print("Smooth shading")
                 if event.key == pg.K_e and not self.keys_pressed_last_frame[pg.K_e]:
                     self.wireframe = not self.wireframe
-                    self.timer = 0
                     if self.wireframe:
                         print("Enabled wireframe")
                     else:
                         print("Disabled wireframe")
+                if event.key == pg.K_t and not self.keys_pressed_last_frame[pg.K_t]:
+                    self.axis_shown = not self.axis_shown
+                    if self.axis_shown:
+                        print("Enabled axis visuals")
+                    else:
+                        print("Disabled axis visuals")
                 if event.key == pg.K_F12 and not self.keys_pressed_last_frame[pg.K_F12]:
                     window_size = pg.display.get_window_size()
                     screen_buffer = glReadPixels(0, 0, *window_size, GL_RGBA, GL_UNSIGNED_BYTE)
@@ -160,6 +166,20 @@ class Viewer:
             glTranslatef(*self.position)
             glRotatef(self.angle_x, 0.0, 1.0, 0.0)
             glRotatef(self.angle_y, math.cos(math.radians(self.angle_x)), 0.0, math.sin(math.radians(self.angle_x)))
+
+            # Show axis visuals
+            if self.axis_shown:
+                glBegin(GL_LINES)
+                glColor3f(1.0, 0.0, 0.0)
+                glVertex3f(2**16, 0.0, 0.0)
+                glVertex3f(-2**16, 0.0, 0.0)
+                glColor3f(0.0, 0.0, 1.0)
+                glVertex3f(0.0, 2**16, 0.0)
+                glVertex3f(0.0, -2**16, 0.0)
+                glColor3f(0.0, 1.0, 0.0)
+                glVertex3f(0.0, 0.0, 2**16)
+                glVertex3f(0.0, 0.0, -2**16)
+                glEnd()
 
             # Render the object
             self.object.render(self.render_method, self.wireframe)
