@@ -131,6 +131,10 @@ class Viewer:
                 if event.key == pg.K_r and not self.keys_pressed_last_frame[pg.K_r]:
                     self.angle_x = round(self.angle_x / 15) * 15
                     self.angle_y = round(self.angle_y / 15) * 15
+                if event.key == pg.K_PAGEUP and not self.keys_pressed_last_frame[pg.K_PAGEUP]:
+                    self.object.subdivide()
+                if event.key == pg.K_PAGEDOWN and not self.keys_pressed_last_frame[pg.K_PAGEDOWN]:
+                    self.object.simplify()
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
