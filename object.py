@@ -97,7 +97,7 @@ class Object:
         glTranslatef(*self.position)
         glRotatef(self.rotation[0], *self.rotation[1])
 
-        if method != RenderMethod.NO_SHADING:
+        if method != RenderMethod.NO_SHADING and method != RenderMethod.POINT_CLOUD:
             # Lighting
             glEnable(GL_LIGHTING)
             if method == RenderMethod.FLAT:
@@ -179,6 +179,11 @@ class Object:
             self.face_buffer.unbind()
             self.vertex_buffer.unbind()
             self.vertex_normal_buffer.unbind()
+
+        # Reset lighting
+        glDisable(GL_LIGHTING)
+        glDisable(GL_LIGHT0)
+        glShadeModel(GL_FLAT)
 
         # End local transform
         glPopMatrix()
