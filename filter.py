@@ -3,6 +3,8 @@ import sys
 import re
 import json
 import numpy as np
+import pandas as pd
+import trimesh
 
 path = "./models"
 txt_format = ".txt"
@@ -15,6 +17,10 @@ dict = json.loads(data)
 
 # Get mesh info
 def get_info(file):
+    # Get mesh
+    mesh = trimesh.load(file, force="mesh")
+
+    # Get file's directory name
     root = os.path.dirname(file)
 
     # Check if directory exists or if it's empty
@@ -31,22 +37,12 @@ def get_info(file):
     # Initialize variables
     label = ""
     model_num = ""
-    num_vertices = 0
-    num_faces = 0
-    type_face = ""
-    min_box = np.array([0.0, 0.0, 0.0])
-    max_box = np.array([0.0, 0.0, 0.0])
+    num_vertices = mesh.vertices.shape[0]
+    num_faces = mesh.faces.shape[0]
+    type_faces = mesh.faces.shape[1]
+    bounding_box = mesh.bounds
 
     for file in list_files:             
-        ### Number of vertices & faces ###
-        if off_format in file:                                  # If file is in off_format, pick up number of vertices and faces
-            with open(root + "/" + file) as f_in:               # Open file and read lines
-                lines = (line.rstrip() for line in f_in) 
-                lines = list(line for line in lines if line)    # Non-blank lines in a list
-            words = lines[1].split()                            # Number of vertices and faces are listed in the second line
-            num_vertices = eval(words[0])                       # Number of vertices is first number
-            num_faces = eval(words[1])                          # Number of faces is second number
-
         ### Class and bounding box ###
         if txt_format in file:                                  # If file is in off_format, pick up class and bounding box
             with open(root + "/" + file) as f_in:               # Open file and read lines
@@ -61,27 +57,28 @@ def get_info(file):
                         if model_num in dict[key]:
                             label = key
 
-            ### Bounding box ###
-            for word in lines[8].split(","):                # Bounding box is listed in the ninth line
-                if "xmin" in word:
-                    min_box[0] = float(re.findall("\d+\.\d+", word)[0])
-                elif "ymin" in word:
-                    min_box[1] = float(re.findall("\d+\.\d+", word)[0])
-                elif "zmin" in word:
-                    min_box[2] = float(re.findall("\d+\.\d+", word)[0])
-                elif "xmax" in word:
-                    max_box[0] = float(re.findall("\d+\.\d+", word)[0])
-                elif "ymax" in word:
-                    max_box[1] = float(re.findall("\d+\.\d+", word)[0])
-                elif "zmax" in word:
-                    max_box[2] = float(re.findall("\d+\.\d+", word)[0])                        
-                bounding_box = np.concatenate((min_box, max_box), axis=0)
-    
-    print("#################")
-    print("### MESH INFO ###")
-    print("#################")
-    print("Model number:", model_num)
-    print("Label:", label)
-    print("Number of vertices:", num_vertices)
-    print("Number of faces:", num_faces)
-    print("Bounding box:", bounding_box)
+    if label == "" or model_num == "":
+        print("Mesh has no label.")
+        model_num = "N/A"
+        label = "N/A"
+
+    if type_faces == "":
+        print("No info regarding type of faces.")
+        type_faces = "N/A"
+
+    return model_num, label, num_vertices, num_faces, type_faces, bounding_box
+
+def get_db_info(dir):
+    data = []
+
+    # List all directories inside the provided directory
+    for root, dirs, files in os.walk(dir):
+        if len(dirs) == 0 and len(files) > 0:   # If number of directories is zero we've reached the last child directory
+            list_files = os.listdir(root)
+            model_num, label, num_vertices, num_faces, type_faces, bounding_box = get_info(root+"/"+list_files[0])
+            info = [model_num, label, num_vertices, num_faces, type_faces, bounding_box]
+            data.append(info)
+
+    # Save data as Dataframe and export it to CSV file
+    df = pd.DataFrame(data, columns=['Model number', 'Label', '# of vertices', "# of faces", "Type of faces", "Bounding box"])
+    df.to_csv("psb.csv", index=False)

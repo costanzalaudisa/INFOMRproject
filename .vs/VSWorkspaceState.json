@@ -1,9 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\models",
-    "\\models\\bunny"
+    "\\classes"
   ],
-  "SelectedNode": "\\classes.txt",
+  "SelectedNode": "\\object.py",
   "PreviewInSolutionExplorer": false
 }
