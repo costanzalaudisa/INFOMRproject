@@ -14,7 +14,7 @@ class RenderMethod(Enum):
     POINT_CLOUD = 3
 
 class Object:
-    def __init__(self, mesh: trimesh.Trimesh, center: np.ndarray = None, color: np.ndarray = np.array([0.5, 0.5, 0.5]), line_color: np.ndarray = np.array([0.3, 0.3, 0.3])):
+    def __init__(self, mesh: trimesh.Trimesh, center: np.ndarray = None, color: np.ndarray = np.array([0.0, 0.5, 0.3]), line_color: np.ndarray = np.array([0.0, 0.1, 0.0])):
         # Set local mesh
         if mesh is None:
             raise ValueError("A valid mesh should be provided")

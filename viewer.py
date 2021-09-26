@@ -17,9 +17,12 @@ FOV = 45
 DISTANCE = -3
 Z_NEAR, Z_FAR = 0.1, 50.0
 FPS = 60
+
 SCALE_FACTOR = 1.1
-MOVE_X = np.array([0.05, 0, 0])
-MOVE_Y = np.array([0, 0.05, 0])
+MOUSE_MOVE_X = np.array([0.05, 0, 0])
+MOUSE_MOVE_Y = np.array([0, 0.05, 0])
+KEY_MOVE_X = np.array([0.01, 0, 0])
+KEY_MOVE_Y = np.array([0, 0.01, 0])
 
 class Viewer:
     # Initializer for the Viewer
@@ -82,17 +85,17 @@ class Viewer:
                     # Turn dragging motion into object panning
                     diff_x, diff_y = event.rel
 
-                    self.position += MOVE_X * diff_x / self.scale[0] / 10
-                    self.position -= MOVE_Y * diff_y / self.scale[0] / 10
+                    self.position += MOUSE_MOVE_X * diff_x / self.scale[0] / 10
+                    self.position -= MOUSE_MOVE_Y * diff_y / self.scale[0] / 10
             elif event.type == pg.KEYDOWN:
-                if event.key == pg.K_w:
-                    self.position -= np.array(MOVE_Y)
-                if event.key == pg.K_s:
-                    self.position += np.array(MOVE_Y)
-                if event.key == pg.K_a:
-                    self.position += np.array(MOVE_X)
-                if event.key == pg.K_d:
-                    self.position -= np.array(MOVE_X)
+                if event.key == pg.K_w or event.key == pg.K_UP:
+                    self.position -= np.array(KEY_MOVE_Y)
+                if event.key == pg.K_s or event.key == pg.K_DOWN:
+                    self.position += np.array(KEY_MOVE_Y)
+                if event.key == pg.K_a or event.key == pg.K_LEFT:
+                    self.position += np.array(KEY_MOVE_X)
+                if event.key == pg.K_d or event.key == pg.K_RIGHT:
+                    self.position -= np.array(KEY_MOVE_X)
                 if event.key == pg.K_1 and not self.keys_pressed_last_frame[pg.K_1]:
                     self.render_method = RenderMethod.POINT_CLOUD
                     self.timer = 0
@@ -148,6 +151,7 @@ class Viewer:
             self.clock.tick(FPS)
 
             # Clear the window
+            glClearColor(0.75, 1, 1, 1)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
             # Reset view
