@@ -34,6 +34,12 @@ class Object:
         self.rotation = (0.0, np.array([0.0, 0.0, 0.0]))
         self.scale = np.array([1.0, 1.0, 1.0])
 
+        self.update_vbos()
+
+    def __del__(self):
+        glDeleteBuffers(1, [self.vertex_buffer, self.vertex_normal_buffer, self.face_buffer])
+
+    def update_vbos(self):
         # Define and fill buffer objects
         self.vertices = np.array([v - self.center for v in self.mesh.vertices], dtype="f")
         self.vertex_buffer = vbo.VBO(self.vertices)
@@ -86,8 +92,19 @@ class Object:
         self.flat_vertex_count = self.flat_vertices.size
         self.flat_face_vertex_count = self.flat_faces.size
 
-    def __del__(self):
-        glDeleteBuffers(1, [self.vertex_buffer, self.vertex_normal_buffer, self.face_buffer])
+    def subdivide(self):
+        self.mesh = trimesh.Trimesh(*trimesh.remesh.subdivide(self.mesh.vertices, self.mesh.faces))
+        print(f"Subdivided to {len(self.mesh.vertices)} vertices")
+
+        self.__del__()
+        self.update_vbos()
+
+    def simplify(self):
+        self.mesh = self.mesh.simplify_quadratic_decimation(len(self.mesh.faces) / 4)
+        print(f"Simplified to {len(self.mesh.vertices)} vertices")
+
+        self.__del__()
+        self.update_vbos()
 
     def render(self, method: RenderMethod = RenderMethod.FLAT, wireframe: bool = False):
         # Start local transform
@@ -97,7 +114,7 @@ class Object:
         glTranslatef(*self.position)
         glRotatef(self.rotation[0], *self.rotation[1])
 
-        if method != RenderMethod.NO_SHADING:
+        if method != RenderMethod.NO_SHADING and method != RenderMethod.POINT_CLOUD:
             # Lighting
             glEnable(GL_LIGHTING)
             if method == RenderMethod.FLAT:
@@ -179,6 +196,11 @@ class Object:
             self.face_buffer.unbind()
             self.vertex_buffer.unbind()
             self.vertex_normal_buffer.unbind()
+
+        # Reset lighting
+        glDisable(GL_LIGHTING)
+        glDisable(GL_LIGHT0)
+        glShadeModel(GL_FLAT)
 
         # End local transform
         glPopMatrix()
