@@ -32,5 +32,12 @@ print("Type of faces:", type_faces)
 print("Bounding box:", bounding_box)
 
 # Show the mesh using the viewer
-viewer = Viewer(Object.load_mesh(mesh_file))
+obj = Object.load_mesh(mesh_file)
+
+# Pre-process the mesh
+obj.center()
+obj.scale()
+
+# View the loaded mesh
+viewer = Viewer(obj)
 viewer.mainLoop()

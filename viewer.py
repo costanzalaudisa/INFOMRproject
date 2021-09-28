@@ -8,8 +8,9 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 
-from object import Object, RenderMethod
+from object_renderer import ObjectRenderer, RenderMethod
 from utils import normalize_vector
+from object import Object
 
 # Define constants
 W, H = 800, 600
@@ -29,6 +30,7 @@ class Viewer:
     def __init__(self, object: Object):
         # Set veriables to be used within the viewer
         self.object = object
+        self.object_renderer = ObjectRenderer(object)
         self.clock = pg.time.Clock()
         self.keys_pressed_last_frame = []
 
@@ -57,7 +59,7 @@ class Viewer:
         for event in pg.event.get():
             # Close window when the red X is pressed
             if event.type == pg.QUIT:
-                del self.object
+                del self.object_renderer
                 pg.quit()
                 quit()
             elif event.type == pg.MOUSEBUTTONDOWN:
@@ -136,8 +138,10 @@ class Viewer:
                     self.angle_y = round(self.angle_y / 15) * 15
                 if event.key == pg.K_PAGEUP and not self.keys_pressed_last_frame[pg.K_PAGEUP]:
                     self.object.subdivide()
+                    self.object_renderer.update_vbos()
                 if event.key == pg.K_PAGEDOWN and not self.keys_pressed_last_frame[pg.K_PAGEDOWN]:
                     self.object.simplify()
+                    self.object_renderer.update_vbos()
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
@@ -190,7 +194,7 @@ class Viewer:
                 glEnd()
 
             # Render the object
-            self.object.render(self.render_method, self.wireframe)
+            self.object_renderer.render(self.render_method, self.wireframe)
 
             # Render to window
             pg.display.flip()
