@@ -3,15 +3,20 @@ from viewer import Viewer
 
 from classes import define_classes
 from filter import get_info, get_db_info
-
-## Get entire PSB database info
-#get_db_info("models")
+from stats import plot_stats
 
 ## Define PSB classes
 #files = ['./classes/train.cla', './classes/test.cla']
 #define_classes(files)
 
-mesh_file = "./models/0/m0/m0.off"
+## Get entire PSB database info
+#get_db_info("models")
+
+# Get database statistics and plot data
+plot_stats()
+
+# Load a model
+mesh_file = "./models/m303/m303.off"
 
 # Get current model's info
 model_num, label, num_vertices, num_faces, type_faces, bounding_box = get_info(mesh_file)

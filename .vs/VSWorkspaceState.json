@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\classes"
+    "\\classes",
+    "\\models"
   ],
   "SelectedNode": "\\object.py",
   "PreviewInSolutionExplorer": false
