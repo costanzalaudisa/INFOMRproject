@@ -1,10 +1,11 @@
-import os
-import sys
-import re
-import json
-import numpy as np
 import pandas as pd
 import trimesh
+import json
+import sys
+import os
+
+from object import Object
+from pathlib import Path
 
 path = "./models"
 txt_format = ".txt"
@@ -30,10 +31,10 @@ def get_info(file):
     if len(os.listdir(root)) == 0:
         print("Error: directory of file '", file, "' is empty")
         sys.exit()
- 
+
     # List content of directory
-    list_files = os.listdir(root)       
-    
+    list_files = os.listdir(root)
+
     # Initialize variables
     label = ""
     model_num = ""
@@ -42,13 +43,13 @@ def get_info(file):
     type_faces = mesh.faces.shape[1]
     bounding_box = mesh.bounds
 
-    for file in list_files:             
+    for file in list_files:
         ### Class and bounding box ###
         if txt_format in file:                                  # If file is in off_format, pick up class and bounding box
             with open(root + "/" + file) as f_in:               # Open file and read lines
-                lines = (line.rstrip() for line in f_in) 
+                lines = (line.rstrip() for line in f_in)
                 lines = list(line for line in lines if line)
-                        
+
             ### Class ###
             for word in lines[0].split():                   # Model number is listed in the first line
                 if word.isdigit():
@@ -82,3 +83,20 @@ def get_db_info(dir):
     # Save data as Dataframe and export it to CSV file
     df = pd.DataFrame(data, columns=['Model number', 'Label', '# of vertices', "# of faces", "Type of faces", "Bounding box"])
     df.to_csv("psb.csv", index=False)
+
+def generate_db(dir: Path, out_path: Path):
+    data = []
+
+    off_files = list(dir.glob(f"**/*{off_format}"))
+    file_count = len(off_files)
+
+    for i, f in enumerate(off_files):
+        print(f"Getting data from file {i} of {file_count}", end="\r")
+        object = Object.load_mesh(f)
+        info = object.get_info()
+        data.append(info)
+
+    # Save data as Dataframe and export it to CSV file
+    df = pd.DataFrame(data, columns=['Model number', 'Label', '# of vertices', "# of faces", "Type of faces", "Bounding box"])
+    df = df.sort_values("Model number")
+    df.to_csv(out_path, index=False)
