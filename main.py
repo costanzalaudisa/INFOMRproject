@@ -10,12 +10,14 @@ from pathlib import Path
 VERTEX_COUNT, THRESHOLD = 1000, 200
 ORIGINAL_MODEL_DIR = Path("./models")
 PROCESSED_MODEL_DIR = Path("./processed-models")
+ORIGINAL_DB = Path("./psb_orig.csv")
+PROCESSED_DB = Path("./psb_proc.csv")
 
 parser = argparse.ArgumentParser(description="INFOMR Project")
 parser.add_argument("-p", "--pre-process", action="store_true", help="pre-process all models")
-parser.add_argument("-c", "--generate-classes", action="store_true", help="generates the classes.txt")
-parser.add_argument("-s", "--plot-stats", action="store_true", help="plots stats saved in the db")
-parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generates database for either (o)riginal or (p)rocessed")
+parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt")
+parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed")
+parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed")
 parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on")
 parser.add_argument("-i", "--info", action="store_true", help="view info of selected model")
 parser.add_argument("-v", "--view", action="store_true", help="view selected model")
@@ -39,13 +41,18 @@ if args.generate_classes:
     define_classes(list(Path("./classes").iterdir()))
 
 if args.plot_stats:
-    plot_stats()
+    if args.plot_stats.lower() == "o":
+        plot_stats(ORIGINAL_DB)
+    elif args.plot_stats.lower() == "p":
+        plot_stats(PROCESSED_DB)
+    else:
+        print(f"No valid input was found, {args.plot_stats} does not equal, `o` or `p`.")
 
 if args.generate_database:
     if args.generate_database.lower() == "o":
-        generate_db(ORIGINAL_MODEL_DIR, Path("./psb_orig.csv"))
+        generate_db(ORIGINAL_MODEL_DIR, ORIGINAL_DB)
     elif args.generate_database.lower() == "p":
-        generate_db(PROCESSED_MODEL_DIR, Path("./psb_proc.csv"))
+        generate_db(PROCESSED_MODEL_DIR, PROCESSED_DB)
     else:
         print(f"No valid input was found, {args.generate_database} does not equal, `o` or `p`.")
 

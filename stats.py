@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot_stats():
+def plot_stats(db_path):
     # Gather database statistics
-    df = pd.read_csv('psb.csv')
-    stats = df.describe()
+    df = pd.read_csv(db_path)
+    stats = df[df.columns.difference(["Model Number"])].describe()
     print(stats)
 
     # Gather models with minimum and maximum values
