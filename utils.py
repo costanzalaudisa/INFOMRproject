@@ -1,5 +1,17 @@
 import numpy as np
 import math
+import json
+
+with open('classes.txt') as f:
+    data = f.read()
+classes_dict = json.loads(data)
+
+def get_label_by_id(id: int):
+    id = str(id)
+
+    for key in classes_dict.keys():
+        if id in classes_dict[key]:
+            return key
 
 def normalize_vector(v: np.ndarray):
     return v / np.linalg.norm(v)

@@ -1,21 +1,52 @@
 import trimesh
+import utils
 
 from pathlib import Path
 from math import sqrt
-
 class Object:
-    def __init__(self, mesh: trimesh.Trimesh):
+    def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
         # Set local mesh
         if mesh is None:
             raise ValueError("A valid mesh should be provided")
         else:
             self.mesh = mesh
 
+        self.model_num = model_num
+        self.label = label
+
     def load_mesh(path: Path):
         # Load a mesh and return it as an Object
         mesh = trimesh.load(path, force="mesh")
 
-        return Object(mesh)
+        # Get model num from path
+        model_num = int(path.name.split(".")[0].split("m")[1])
+
+        # Get label from model num
+        label = None
+        if model_num != "":
+            label = utils.get_label_by_id(model_num)
+
+        return Object(mesh, model_num, label)
+
+    def get_info(self):
+        # Retrieve object info and return it
+        label = self.label
+        model_num = self.model_num
+        num_vertices = self.mesh.vertices.shape[0]
+        num_faces = self.mesh.faces.shape[0]
+        type_faces = self.mesh.faces.shape[1]
+        bounding_box = self.mesh.bounds
+
+        if label is None or model_num is None:
+            print("Mesh has no label.")
+            model_num = "N/A"
+            label = "N/A"
+
+        if type_faces == "":
+            print("No info regarding type of faces.")
+            type_faces = "N/A"
+
+        return model_num, label, num_vertices, num_faces, type_faces, bounding_box
 
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]
@@ -38,13 +69,26 @@ class Object:
         # Apply found scale factor
         self.mesh.apply_scale(scale_factor)
 
+    def remesh_to(self, vertex_count, threshold):
+        # Remesh the mesh such that the mesh has vertex_count +/- threshold vertices
+        while len(self.mesh.vertices) > vertex_count + threshold or len(self.mesh.vertices) < vertex_count - threshold:
+            # If number of vertices is too high, simplify
+            if len(self.mesh.vertices) > vertex_count + threshold:
+                self.simplyify_to(vertex_count)
+
+            # If number of vertices is too low, subdivide
+            if len(self.mesh.vertices) < vertex_count - threshold:
+                self.subdivide()
+
     def subdivide(self):
         self.mesh = trimesh.Trimesh(*trimesh.remesh.subdivide(self.mesh.vertices, self.mesh.faces))
-        print(f"Subdivided to {len(self.mesh.vertices)} vertices")
 
     def simplify(self):
         self.mesh = self.mesh.simplify_quadratic_decimation(len(self.mesh.faces) / 4)
-        print(f"Simplified to {len(self.mesh.vertices)} vertices")
+
+    def simplyify_to(self, vector_count):
+        new_face_count = vector_count * (len(self.mesh.faces) / len(self.mesh.vertices))
+        self.mesh = self.mesh.simplify_quadratic_decimation(new_face_count)
 
     def save_mesh(self, path: Path):
         # Save a mesh to a file
