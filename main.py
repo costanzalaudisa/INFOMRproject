@@ -62,7 +62,7 @@ if args.generate_database:
 obj = None
 
 if args.object_id is not None:
-    obj = Object.load_mesh(PROCESSED_MODEL_DIR / Path(f"m{args.object_id}.off"))
+    obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
 else:
     if args.info or args.view:
         print("No object was selected")
@@ -70,7 +70,7 @@ else:
 
 if args.info:
     # Print info on the selected mesh
-    model_num, label, num_vertices, num_faces, type_faces, bounding_box = obj.get_info()
+    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box = obj.get_info()
 
     print("#################")
     print("### MESH INFO ###")
@@ -79,6 +79,7 @@ if args.info:
     print("Label:", label)
     print("Number of vertices:", num_vertices)
     print("Number of faces:", num_faces)
+    print("Number of edges:", num_edges)
     print("Type of faces:", type_faces)
     print("Bounding box:", bounding_box)
 

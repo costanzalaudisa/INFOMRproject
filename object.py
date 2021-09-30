@@ -34,19 +34,21 @@ class Object:
         model_num = self.model_num
         num_vertices = self.mesh.vertices.shape[0]
         num_faces = self.mesh.faces.shape[0]
-        type_faces = self.mesh.faces.shape[1]
+        num_edges = self.mesh.edges.shape[0]
+        type_faces = ""
         bounding_box = self.mesh.bounds
+
+        if self.mesh.faces.shape[1] == 3:
+            type_faces = "triangles"
+        elif self.mesh.faces.shape[1] == 4:
+            type_faces = "quads"
 
         if label is None or model_num is None:
             print("Mesh has no label.")
             model_num = "N/A"
             label = "N/A"
 
-        if type_faces == "":
-            print("No info regarding type of faces.")
-            type_faces = "N/A"
-
-        return model_num, label, num_vertices, num_faces, type_faces, bounding_box
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box
 
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]

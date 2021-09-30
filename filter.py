@@ -40,8 +40,14 @@ def get_info(file):
     model_num = ""
     num_vertices = mesh.vertices.shape[0]
     num_faces = mesh.faces.shape[0]
-    type_faces = mesh.faces.shape[1]
+    num_edges = mesh.edges.shape[0]
+    type_faces = ""
     bounding_box = mesh.bounds
+
+    if mesh.faces.shape[1] == 3:
+        type_faces = "triangles"
+    elif mesh.faces.shape[1] == 4:
+        type_faces = "quads"
 
     for file in list_files:
         ### Class and bounding box ###
@@ -63,11 +69,7 @@ def get_info(file):
         model_num = "N/A"
         label = "N/A"
 
-    if type_faces == "":
-        print("No info regarding type of faces.")
-        type_faces = "N/A"
-
-    return model_num, label, num_vertices, num_faces, type_faces, bounding_box
+    return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box
 
 def get_db_info(dir):
     data = []
@@ -76,12 +78,12 @@ def get_db_info(dir):
     for root, dirs, files in os.walk(dir):
         if len(dirs) == 0 and len(files) > 0:   # If number of directories is zero we've reached the last child directory
             list_files = os.listdir(root)
-            model_num, label, num_vertices, num_faces, type_faces, bounding_box = get_info(root+"/"+list_files[0])
-            info = [model_num, label, num_vertices, num_faces, type_faces, bounding_box]
+            model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box = get_info(root+"/"+list_files[0])
+            info = [model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box]
             data.append(info)
 
     # Save data as Dataframe and export it to CSV file
-    df = pd.DataFrame(data, columns=['Model number', 'Label', '# of vertices', "# of faces", "Type of faces", "Bounding box"])
+    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box"])
     df.to_csv("psb.csv", index=False)
 
 def generate_db(dir: Path, out_path: Path):
@@ -97,6 +99,6 @@ def generate_db(dir: Path, out_path: Path):
         data.append(info)
 
     # Save data as Dataframe and export it to CSV file
-    df = pd.DataFrame(data, columns=['Model number', 'Label', '# of vertices', "# of faces", "Type of faces", "Bounding box"])
+    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box"])
     df = df.sort_values("Model number")
     df.to_csv(out_path, index=False)
