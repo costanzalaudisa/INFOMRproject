@@ -19,8 +19,8 @@ parser.add_argument("-c", "--generate-classes", action="store_true", help="gener
 parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed")
 parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed")
 parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on")
-parser.add_argument("-i", "--info", action="store_true", help="view info of selected model")
-parser.add_argument("-v", "--view", action="store_true", help="view selected model")
+parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model")
+parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model")
 
 args = parser.parse_args()
 
@@ -61,14 +61,20 @@ if args.generate_database:
 #-------------------------------------------------------#
 obj = None
 
-if args.object_id is not None:
-    obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-else:
+if args.object_id is None:
     if args.info or args.view:
         print("No object was selected")
     exit()
 
 if args.info:
+    if args.object_id is not None:
+        if args.info.lower() == "o":
+            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        elif args.info.lower() == "p":
+            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        else:
+            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
+
     # Print info on the selected mesh
     model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box = obj.get_info()
 
@@ -84,6 +90,13 @@ if args.info:
     print("Bounding box:", bounding_box)
 
 if args.view:
+    if args.object_id is not None:
+        if args.view.lower() == "o":
+            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        elif args.view.lower() == "p":
+            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        else:
+            print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
     # View the selected mesh
     viewer = Viewer(obj)
     viewer.mainLoop()
