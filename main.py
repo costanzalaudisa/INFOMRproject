@@ -32,6 +32,7 @@ if args.pre_process:
     for i, f in enumerate(off_files):
         print(f"Pre-processing file {i} of {file_count}", end="\r")
         object = Object.load_mesh(f)
+        object.process()
         object.remesh_to(VERTEX_COUNT, THRESHOLD)
         object.scale()
         object.center()

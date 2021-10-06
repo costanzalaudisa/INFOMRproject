@@ -50,6 +50,11 @@ class Object:
 
         return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box
 
+    def process(self):
+        # Remove duplicate faces and vertices
+        self.mesh.process()
+        self.mesh.remove_duplicate_faces()
+
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]
         self.mesh.apply_translation(-1 * self.mesh.centroid)
