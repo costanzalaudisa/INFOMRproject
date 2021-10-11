@@ -16,6 +16,15 @@ def get_label_by_id(id: int):
 def normalize_vector(v: np.ndarray):
     return v / np.linalg.norm(v)
 
+def unit_vector(vector: np.ndarray):
+    return vector / np.linalg.norm(vector)
+
+def angle_between(vector1, vector2):
+    v1 = unit_vector(vector1)
+    v2 = unit_vector(vector2)
+
+    return np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0))
+
 def compute_normal(triangle: np.ndarray):
     # Triangle consists of three vertices
     if len(triangle) != 3:

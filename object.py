@@ -5,6 +5,9 @@ import numpy as np
 from pathlib import Path
 from math import sqrt
 
+SAMPLE_SIZE = 100
+BIN_COUNT = 10
+
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
         # Set local mesh
@@ -42,6 +45,13 @@ class Object:
         type_faces = ""
         bounding_box = self.mesh.bounds
         surface = self.mesh.area
+        bounding_box_volume = self.mesh.bounding_box_oriented.volume
+        volume = -1
+
+        try:
+            volume = self.mesh.convex_hull.volume
+        except:
+            print("Couldn't get convex hull for this mesh")
 
         if self.mesh.faces.shape[1] == 3:
             type_faces = "triangles"
@@ -53,7 +63,18 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume
+
+    def A3(self):
+        self.vertices = self.mesh.vertices
+
+        angles = []
+
+        for _ in range(SAMPLE_SIZE):
+            samples = np.random.choice(self.vertices, 3, False)
+            angles.append(utils.angle_between(samples[1] - samples[0], samples[2] - samples[0]))
+
+        return angles
 
     def check_model(self):
         model_num = self.model_num
@@ -65,11 +86,16 @@ class Object:
 
         return model_num, watertight, winding, normals, pos_volume
 
+    def preprocess(self, vertex_count, threshold):
+        self.process()
+        self.remesh_to(vertex_count, threshold)
+        self.scale()
+        self.center()
+
     def process(self):
         # Remove duplicate faces and vertices
-        #self.mesh.process()
-        #self.mesh.remove_duplicate_faces()
-        self.mesh.fill_holes()
+        self.mesh.process()
+        self.mesh.remove_duplicate_faces()
 
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]

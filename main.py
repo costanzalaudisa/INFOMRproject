@@ -7,8 +7,6 @@ from object import Object
 from viewer import Viewer
 from pathlib import Path
 
-import trimesh
-
 VERTEX_COUNT, THRESHOLD = 1000, 200
 ORIGINAL_MODEL_DIR = Path("./models")
 PROCESSED_MODEL_DIR = Path("./processed-models")
@@ -36,10 +34,7 @@ if args.pre_process:
     for i, f in enumerate(off_files):
         print(f"Pre-processing file {i} of {file_count}", end="\r")
         object = Object.load_mesh(f)
-        object.process()
-        object.remesh_to(VERTEX_COUNT, THRESHOLD)
-        object.scale()
-        object.center()
+        object.preprocess(VERTEX_COUNT, THRESHOLD)
         object.save_mesh(PROCESSED_MODEL_DIR / f.name)
 
 if args.generate_classes:
