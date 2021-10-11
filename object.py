@@ -1,8 +1,10 @@
 import trimesh
 import utils
+import numpy as np
 
 from pathlib import Path
 from math import sqrt
+
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
         # Set local mesh
@@ -26,6 +28,8 @@ class Object:
         if model_num != "":
             label = utils.get_label_by_id(model_num)
 
+        # mesh = mesh.convex_hull
+
         return Object(mesh, model_num, label)
 
     def get_info(self):
@@ -37,6 +41,7 @@ class Object:
         num_edges = self.mesh.edges.shape[0]
         type_faces = ""
         bounding_box = self.mesh.bounds
+        surface = self.mesh.area
 
         if self.mesh.faces.shape[1] == 3:
             type_faces = "triangles"
@@ -48,12 +53,23 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface
+
+    def check_model(self):
+        model_num = self.model_num
+
+        watertight = self.mesh.is_watertight
+        winding = self.mesh.is_winding_consistent
+        normals = np.isfinite(self.mesh.center_mass).all()
+        pos_volume = self.mesh.volume > 0.0
+
+        return model_num, watertight, winding, normals, pos_volume
 
     def process(self):
         # Remove duplicate faces and vertices
-        self.mesh.process()
-        self.mesh.remove_duplicate_faces()
+        #self.mesh.process()
+        #self.mesh.remove_duplicate_faces()
+        self.mesh.fill_holes()
 
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]

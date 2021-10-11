@@ -7,6 +7,8 @@ from object import Object
 from viewer import Viewer
 from pathlib import Path
 
+import trimesh
+
 VERTEX_COUNT, THRESHOLD = 1000, 200
 ORIGINAL_MODEL_DIR = Path("./models")
 PROCESSED_MODEL_DIR = Path("./processed-models")
@@ -21,6 +23,8 @@ parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="gener
 parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on")
 parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model")
 parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model")
+parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model")
+parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset")
 
 args = parser.parse_args()
 
@@ -77,7 +81,7 @@ if args.info:
             print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
-    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box = obj.get_info()
+    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, watertight = obj.get_info()
 
     print("#################")
     print("### MESH INFO ###")
@@ -89,6 +93,7 @@ if args.info:
     print("Number of edges:", num_edges)
     print("Type of faces:", type_faces)
     print("Bounding box:", bounding_box)
+    print("Surface area:", surface)
 
 if args.view:
     if args.object_id is not None:
@@ -98,6 +103,61 @@ if args.view:
             obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
         else:
             print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
+
     # View the selected mesh
     viewer = Viewer(obj)
     viewer.mainLoop()
+
+if args.check_model:
+    if args.object_id is not None:
+        if args.check_model.lower() == "o":
+            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        elif args.check_model.lower() == "p":
+            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        else:
+            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
+
+    # Print info on the selected mesh
+    model_num, watertight, winding, normals, pos_volume = obj.check_model()
+
+    print("### Checking model", model_num, "###")
+    print("Is mesh watertight?", watertight)
+    print("Does mesh have consistent winding?", watertight)
+    print("Does mesh have outward facing normals?", watertight)
+    print("Does mesh have positive volume?", pos_volume)
+
+if args.check_db:
+    if args.object_id is not None:
+        if args.check_db.lower() == "o":
+            off_files = list(ORIGINAL_MODEL_DIR.glob("**/*.off"))
+        elif args.check_db.lower() == "p":
+            off_files = list(PROCESSED_MODEL_DIR.glob("**/*.off"))
+        else:
+            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
+
+    file_count = len(off_files)
+
+    watertight_count = 0
+    winding_count = 0
+    normals_count = 0
+    volume_count = 0
+
+    for i, f in enumerate(off_files):
+        print(f"Checking file {i} of {file_count}", end="\r")
+        object = Object.load_mesh(f)
+        model_num, watertight, winding, normals, pos_volume = object.check_model()
+
+        if not watertight:
+            watertight_count += 1
+        if not winding:
+            winding_count += 1
+        if not normals:
+            normals_count += 1
+        if not pos_volume:
+            volume_count += 1
+
+    print("\n")
+    print("# Number of non-watertight meshes:", watertight_count, "out of", file_count)
+    print("# Number of meshes with inconsistent winding:", winding_count, "out of", file_count)
+    print("# Number of meshes with no outward facing normals:", normals_count, "out of", file_count)
+    print("# Number of meshes with non-positive volume:", volume_count, "out of", file_count)
