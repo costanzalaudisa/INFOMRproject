@@ -183,14 +183,14 @@ class Viewer:
             if self.axis_shown:
                 glBegin(GL_LINES)
                 glColor3f(1.0, 0.0, 0.0)
-                glVertex3f(2**16, 0.0, 0.0)
-                glVertex3f(-2**16, 0.0, 0.0)
+                glVertex3f(2**32, 0.0, 0.0)
+                glVertex3f(-2**32, 0.0, 0.0)
                 glColor3f(0.0, 0.0, 1.0)
-                glVertex3f(0.0, 2**16, 0.0)
-                glVertex3f(0.0, -2**16, 0.0)
+                glVertex3f(0.0, 2**32, 0.0)
+                glVertex3f(0.0, -2**32, 0.0)
                 glColor3f(0.0, 1.0, 0.0)
-                glVertex3f(0.0, 0.0, 2**16)
-                glVertex3f(0.0, 0.0, -2**16)
+                glVertex3f(0.0, 0.0, 2**32)
+                glVertex3f(0.0, 0.0, -2**32)
                 glEnd()
 
             # Render the object
