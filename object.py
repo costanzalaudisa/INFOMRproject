@@ -1,11 +1,12 @@
 import trimesh
 import utils
 import numpy as np
+import math
 
 from pathlib import Path
 from math import sqrt
 
-SAMPLE_SIZE = 100
+SAMPLE_SIZE = 1000
 BIN_COUNT = 10
 
 class Object:
@@ -46,7 +47,13 @@ class Object:
         bounding_box = self.mesh.bounds
         surface = self.mesh.area
         bounding_box_volume = self.mesh.bounding_box_oriented.volume
-        volume = -1
+        volume = self.mesh.convex_hull.volume
+        compactness = surface ** 3 / (36 * math.pi * volume ** 2)
+        A3 = self.A3()
+        D1 = self.D1()
+        D2 = self.D2()
+        D3 = self.D3()
+        D4 = self.D4()
 
         try:
             volume = self.mesh.convex_hull.volume
@@ -63,18 +70,101 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, A3, D1, D2, D3, D4
 
     def A3(self):
-        self.vertices = self.mesh.vertices
+        vertices = self.mesh.vertices
 
         angles = []
 
         for _ in range(SAMPLE_SIZE):
-            samples = np.random.choice(self.vertices, 3, False)
+            samples = vertices[np.random.choice(vertices.shape[0], 3, replace=False)]
             angles.append(utils.angle_between(samples[1] - samples[0], samples[2] - samples[0]))
 
-        return angles
+        bins = np.linspace(0, math.pi, BIN_COUNT)
+        bin_counts = np.histogram(angles, bins)[0]
+
+        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        return bin_counts
+
+    def D1(self):
+        vertices = self.mesh.vertices
+        centroid = self.mesh.centroid
+
+        distances = []
+        for _ in range(SAMPLE_SIZE):
+            sample = vertices[np.random.choice(vertices.shape[0], 1, replace=False)]
+            distances.append(np.linalg.norm(sample - centroid))
+
+        bins = np.linspace(0, sqrt(3) / 2, BIN_COUNT)
+        bin_counts = np.histogram(distances, bins)[0]
+
+        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        return bin_counts
+
+    def D2(self):
+        vertices = self.mesh.vertices
+
+        distances = []
+        for _ in range(SAMPLE_SIZE):
+            sample = vertices[np.random.choice(vertices.shape[0], 2, replace=False)]
+            distances.append(np.linalg.norm(sample[0] - sample[1]))
+
+        bins = np.linspace(0, sqrt(3), BIN_COUNT)
+        bin_counts = np.histogram(distances, bins)[0]
+
+        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        return bin_counts
+
+    def D3(self):
+        vertices = self.mesh.vertices
+
+        square_rooted_areas = []
+        for _ in range(SAMPLE_SIZE):
+            sample = vertices[np.random.choice(vertices.shape[0], 3, replace=False)]
+            a = np.linalg.norm(sample[0] - sample[1])
+            b = np.linalg.norm(sample[1] - sample[2])
+            c = np.linalg.norm(sample[0] - sample[2])
+
+            p = (a + b + c) / 2
+            area = sqrt(np.abs(p * (p - a) * (p - b) * (p - c)))
+            square_rooted_areas.append(sqrt(area))
+
+        # Largest triangle has sides of sqrt(2) each
+        # Area of this triangle is 0.5 * sqrt(3)
+        bins = np.linspace(0, sqrt(0.5 * sqrt(3)), BIN_COUNT)
+        bin_counts = np.histogram(square_rooted_areas, bins)[0]
+
+        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        return bin_counts
+
+    def D4(self):
+        vertices = self.mesh.vertices
+
+        cube_rooted_volumes = []
+
+        for _ in range(SAMPLE_SIZE):
+            sample = vertices[np.random.choice(vertices.shape[0], 4, replace=False)]
+            ad = sample[0] - sample[3]
+            bd = sample[1] - sample[3]
+            cd = sample[2] - sample[3]
+
+            volume = np.abs(np.dot(ad, np.cross(bd, cd))) / 6
+
+            cube_rooted_volumes.append(volume ** (1/3))
+
+        # Largest tetrahedron has sides of sqrt(2) each
+        # Volume of this tetrahedron is 1/3
+        bins = np.linspace(0, (1/3)**(1/3), BIN_COUNT)
+        bin_counts = np.histogram(cube_rooted_volumes, bins)[0]
+
+        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        return bin_counts
 
     def check_model(self):
         model_num = self.model_num
