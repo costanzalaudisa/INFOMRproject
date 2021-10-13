@@ -44,7 +44,7 @@ class Object:
         num_faces = self.mesh.faces.shape[0]
         num_edges = self.mesh.edges.shape[0]
         type_faces = ""
-        bounding_box = self.mesh.bounds
+        bounding_box = list(map(list, self.mesh.bounds))
         surface = self.mesh.area
         bounding_box_volume = self.mesh.bounding_box_oriented.volume
         volume = self.mesh.convex_hull.volume
@@ -86,6 +86,8 @@ class Object:
 
         assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
+        bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
+
         return bin_counts
 
     def D1(self):
@@ -102,6 +104,8 @@ class Object:
 
         assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
+        bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
+
         return bin_counts
 
     def D2(self):
@@ -116,6 +120,8 @@ class Object:
         bin_counts = np.histogram(distances, bins)[0]
 
         assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
         return bin_counts
 
@@ -140,6 +146,8 @@ class Object:
 
         assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
+        bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
+
         return bin_counts
 
     def D4(self):
@@ -163,6 +171,8 @@ class Object:
         bin_counts = np.histogram(cube_rooted_volumes, bins)[0]
 
         assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+
+        bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
         return bin_counts
 
