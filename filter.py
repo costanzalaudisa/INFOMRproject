@@ -99,6 +99,6 @@ def generate_db(dir: Path, out_path: Path):
         data.append(info)
 
     # Save data as Dataframe and export it to CSV file
-    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "A3", "D1", "D2", "D3", "D4"])
+    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Eccentricity", "A3", "D1", "D2", "D3", "D4"])
     df = df.sort_values("Model number")
     df.to_csv(out_path, index=False)

@@ -76,8 +76,9 @@ if args.info:
             print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
-    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, watertight = obj.get_info()
+    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
 
+    print("\r")
     print("#################")
     print("### MESH INFO ###")
     print("#################")
@@ -88,7 +89,15 @@ if args.info:
     print("Number of edges:", num_edges)
     print("Type of faces:", type_faces)
     print("Bounding box:", bounding_box)
+    print("\r")
+    print("################")
+    print("### FEATURES ###")
+    print("################")
     print("Surface area:", surface)
+    print("Bounding box volume:", bounding_box_volume)
+    print("Mesh volume:", volume)
+    print("Compactness:", compactness)
+    print("Eccentricity", eccentricity)
 
 if args.view:
     if args.object_id is not None:

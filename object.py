@@ -19,6 +19,7 @@ class Object:
 
         self.model_num = model_num
         self.label = label
+        self.eigenvalues, self.eigenvectors = self.get_eigen()
 
     def load_mesh(path: Path):
         # Load a mesh and return it as an Object
@@ -45,10 +46,24 @@ class Object:
         num_edges = self.mesh.edges.shape[0]
         type_faces = ""
         bounding_box = list(map(list, self.mesh.bounds))
+        
+        # Calculate features
         surface = self.mesh.area
         bounding_box_volume = self.mesh.bounding_box_oriented.volume
         volume = self.mesh.convex_hull.volume
         compactness = surface ** 3 / (36 * math.pi * volume ** 2)
+
+        # Calculate distances between 2 surface points over the entire mesh and pick the largest
+        diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
+        for i in range(len(self.mesh.vertices)):
+            for j in range(len(self.mesh.vertices)):
+                diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
+                if diff > diameter:
+                    diameter = diff
+
+        # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> IS THIS CORRECT???????????
+        eccentricity = abs(max(self.eigenvalues))/abs(min(self.eigenvalues))     
+               
         A3 = self.A3()
         D1 = self.D1()
         D2 = self.D2()
@@ -70,7 +85,7 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, A3, D1, D2, D3, D4
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4
 
     def A3(self):
         vertices = self.mesh.vertices
@@ -179,6 +194,7 @@ class Object:
     def check_model(self):
         model_num = self.model_num
 
+        # Run checks on the model (is it watertight? does it have a consistent winding, outward normals?)
         watertight = self.mesh.is_watertight
         winding = self.mesh.is_winding_consistent
         normals = np.isfinite(self.mesh.center_mass).all()
@@ -186,11 +202,41 @@ class Object:
 
         return model_num, watertight, winding, normals, pos_volume
 
+    def get_eigen(self):
+        # Compute the covariance matrix for mesh
+        A = np.transpose(self.mesh.vertices)
+        
+        A_cov = np.cov(A)
+
+        # Compute eigenvalues and eigenvectors for covariance matrix  
+        eigenvalues, eigenvectors = np.linalg.eig(A_cov)
+
+        print("==> eigenvalues for (x, y, z)")
+        print(eigenvalues)
+        print("\n==> eigenvectors")
+        print(eigenvectors)
+
+        # Get major, medium, minor eigenvectors by eigenvalue magnitude
+        indices = [0, 1, 2]
+        indices.remove(np.argmax(eigenvalues, axis=0))
+        indices.remove(np.argmin(eigenvalues, axis=0))
+
+        major_eigenvector = eigenvectors[np.argmax(eigenvalues, axis=0)]
+        medium_eigenvector = eigenvectors[indices[0]]
+        minor_eigenvector = eigenvectors[np.argmin(eigenvalues, axis=0)]
+ 
+        # Fix e3 by replacing it with e1 × e2 (Tech Tips 3A)
+        minor_eigenvector = np.cross(major_eigenvector, medium_eigenvector)
+
+        eigenvectors = np.array([major_eigenvector, medium_eigenvector, minor_eigenvector])
+
+        return eigenvalues, eigenvectors
+
     def preprocess(self, vertex_count, threshold):
         self.process()
         self.remesh_to(vertex_count, threshold)
-        self.scale()
         self.center()
+        #self.scale()
 
     def process(self):
         # Remove duplicate faces and vertices
@@ -200,6 +246,15 @@ class Object:
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]
         self.mesh.apply_translation(-1 * self.mesh.centroid)
+
+    def align(self):
+        # TODO: how to do this???
+        X_coords = self.mesh.vertices[:,0]
+        Y_coords = self.mesh.vertices[:,1]
+        Z_coords = self.mesh.vertices[:,2]
+        #X_coords = np.dot(X_coords, self.major_eigenvector)
+        #Y_coords = np.dot(Y_coords, self.medium_eigenvector)
+        #Z_coords = np.dot(X_coords, self.minor_eigenvector)
 
     def scale(self):
         # Scale the mesh such that it tightly fits in a unit bounding box
