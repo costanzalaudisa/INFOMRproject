@@ -233,10 +233,12 @@ class Object:
         return eigenvalues, eigenvectors
 
     def preprocess(self, vertex_count, threshold):
-        self.process()
-        self.remesh_to(vertex_count, threshold)
-        self.center()
-        #self.scale()
+        self.process()                          # adjust meshes (remove duplicate faces, etc.)
+        self.remesh_to(vertex_count, threshold) # remesh
+        self.center()                           # translate barycenter to origin
+        self.align()                            # compute eigenvectors and align with coordinate frame
+        self.flip()                             # flip based on moment test
+        self.scale()                            # scale to unit volume
 
     def process(self):
         # Remove duplicate faces and vertices
@@ -248,13 +250,11 @@ class Object:
         self.mesh.apply_translation(-1 * self.mesh.centroid)
 
     def align(self):
-        # TODO: how to do this???
-        X_coords = self.mesh.vertices[:,0]
-        Y_coords = self.mesh.vertices[:,1]
-        Z_coords = self.mesh.vertices[:,2]
-        #X_coords = np.dot(X_coords, self.major_eigenvector)
-        #Y_coords = np.dot(Y_coords, self.medium_eigenvector)
-        #Z_coords = np.dot(X_coords, self.minor_eigenvector)
+        # TODO: is this correct??? are the X coordinates associated with the major eigenvector correctly? (note: eigenvectors are ordered)
+        self.mesh.vertices = np.dot(self.mesh.vertices, self.eigenvectors)
+
+        #for i in range(len(self.mesh.vertices)):
+        #    self.mesh.vertices[i] = np.dot(self.mesh.vertices[i], self.eigenvectors)
 
     def scale(self):
         # Scale the mesh such that it tightly fits in a unit bounding box
@@ -272,6 +272,13 @@ class Object:
 
         # Apply found scale factor
         self.mesh.apply_scale(scale_factor)
+
+    def flip(self):
+        # Perform flipping test (Tech Tips 3A)
+        f = sum((self.mesh.triangles_center)*((self.mesh.triangles_center)**2))
+
+        # Mirror mesh using scaling factors
+        self.mesh.vertices = self.mesh.vertices * np.sign(f)
 
     def remesh_to(self, vertex_count, threshold):
         # Remesh the mesh such that the mesh has vertex_count +/- threshold vertices

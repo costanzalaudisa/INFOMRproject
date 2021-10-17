@@ -7,6 +7,8 @@ from object import Object
 from viewer import Viewer
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+
 VERTEX_COUNT, THRESHOLD = 1000, 200
 ORIGINAL_MODEL_DIR = Path("./models")
 PROCESSED_MODEL_DIR = Path("./processed-models")
@@ -107,6 +109,13 @@ if args.view:
             obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
         else:
             print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
+
+    #obj.process()                           # adjust meshes (remove duplicate faces, etc.)
+    #obj.remesh_to(VERTEX_COUNT, THRESHOLD)  # remesh
+    #obj.center()                            # translate barycenter to origin
+    #obj.align()                             # compute eigenvectors and align with coordinate frame
+    #obj.flip()                              # flip based on moment test
+    #obj.scale()                             # scale to unit volume                             
 
     # View the selected mesh
     viewer = Viewer(obj)
