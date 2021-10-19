@@ -78,7 +78,7 @@ if args.info:
             print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
-    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
+    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
 
     print("\r")
     print("#################")
@@ -99,6 +99,7 @@ if args.info:
     print("Bounding box volume:", bounding_box_volume)
     print("Mesh volume:", volume)
     print("Compactness:", compactness)
+    print("Diameter:", diameter)
     print("Eccentricity", eccentricity)
 
 if args.view:
@@ -108,14 +109,7 @@ if args.view:
         elif args.view.lower() == "p":
             obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
         else:
-            print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
-
-    #obj.process()                           # adjust meshes (remove duplicate faces, etc.)
-    #obj.remesh_to(VERTEX_COUNT, THRESHOLD)  # remesh
-    #obj.center()                            # translate barycenter to origin
-    #obj.align()                             # compute eigenvectors and align with coordinate frame
-    #obj.flip()                              # flip based on moment test
-    #obj.scale()                             # scale to unit volume                             
+            print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")                           
 
     # View the selected mesh
     viewer = Viewer(obj)

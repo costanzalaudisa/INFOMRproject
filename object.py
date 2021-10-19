@@ -19,7 +19,6 @@ class Object:
 
         self.model_num = model_num
         self.label = label
-        self.eigenvalues, self.eigenvectors = self.get_eigen()
 
     def load_mesh(path: Path):
         # Load a mesh and return it as an Object
@@ -61,8 +60,9 @@ class Object:
                 if diff > diameter:
                     diameter = diff
 
-        # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> IS THIS CORRECT???????????
-        eccentricity = abs(max(self.eigenvalues))/abs(min(self.eigenvalues))     
+        # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> NOTE!!! values seem weird, probably needs checking
+        eigenvalues, eigenvectors = self.get_eigen()
+        eccentricity = abs(max(eigenvalues))/abs(min(eigenvalues))     
                
         A3 = self.A3()
         D1 = self.D1()
@@ -85,7 +85,7 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4
 
     def A3(self):
         vertices = self.mesh.vertices
@@ -211,11 +211,6 @@ class Object:
         # Compute eigenvalues and eigenvectors for covariance matrix  
         eigenvalues, eigenvectors = np.linalg.eig(A_cov)
 
-        print("==> eigenvalues for (x, y, z)")
-        print(eigenvalues)
-        print("\n==> eigenvectors")
-        print(eigenvectors)
-
         # Get major, medium, minor eigenvectors by eigenvalue magnitude
         indices = [0, 1, 2]
         indices.remove(np.argmax(eigenvalues, axis=0))
@@ -250,11 +245,11 @@ class Object:
         self.mesh.apply_translation(-1 * self.mesh.centroid)
 
     def align(self):
-        # TODO: is this correct??? are the X coordinates associated with the major eigenvector correctly? (note: eigenvectors are ordered)
-        self.mesh.vertices = np.dot(self.mesh.vertices, self.eigenvectors)
+        # Calculate eigenvectors
+        eigenvalues, eigenvectors = self.get_eigen()
 
-        #for i in range(len(self.mesh.vertices)):
-        #    self.mesh.vertices[i] = np.dot(self.mesh.vertices[i], self.eigenvectors)
+        # Align eigenvectors with the XYZ coordinate frame by projecting (Tech Tips 3A)
+        self.mesh = trimesh.Trimesh(np.dot(self.mesh.vertices, eigenvectors), self.mesh.faces)
 
     def scale(self):
         # Scale the mesh such that it tightly fits in a unit bounding box
@@ -278,7 +273,7 @@ class Object:
         f = sum((self.mesh.triangles_center)*((self.mesh.triangles_center)**2))
 
         # Mirror mesh using scaling factors
-        self.mesh.vertices = self.mesh.vertices * np.sign(f)
+        self.mesh = trimesh.Trimesh((self.mesh.vertices * np.sign(f)), self.mesh.faces) 
 
     def remesh_to(self, vertex_count, threshold):
         # Remesh the mesh such that the mesh has vertex_count +/- threshold vertices
