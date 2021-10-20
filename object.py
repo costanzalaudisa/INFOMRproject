@@ -43,14 +43,26 @@ class Object:
         num_vertices = self.mesh.vertices.shape[0]
         num_faces = self.mesh.faces.shape[0]
         num_edges = self.mesh.edges.shape[0]
-        type_faces = ""
         bounding_box = list(map(list, self.mesh.bounds))
-        
+        barycenter = self.mesh.centroid
+
         # Calculate features
         surface = self.mesh.area
-        bounding_box_volume = self.mesh.bounding_box_oriented.volume
-        volume = self.mesh.convex_hull.volume
-        compactness = surface ** 3 / (36 * math.pi * volume ** 2)
+        bounding_box_volume = None
+        try:
+            bounding_box_volume = self.mesh.bounding_box_oriented.volume
+        except:
+            print("Something went wrong when calculating the axis aligned bounding box")
+
+        volume = None
+        try:
+            volume = self.mesh.convex_hull.volume
+        except:
+            print("Something went wrong when calculating the convex_hull")
+
+        compactness = None
+        if volume:
+            compactness = surface ** 3 / (36 * math.pi * volume ** 2)
 
         # Calculate distances between 2 surface points over the entire mesh and pick the largest
         diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
@@ -62,18 +74,15 @@ class Object:
 
         # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> NOTE!!! values seem weird, probably needs checking
         eigenvalues, eigenvectors = self.get_eigen()
-        eccentricity = abs(max(eigenvalues))/abs(min(eigenvalues))     
-               
+        eccentricity = abs(max(eigenvalues))/abs(min(eigenvalues))
+
         A3 = self.A3()
         D1 = self.D1()
         D2 = self.D2()
         D3 = self.D3()
         D4 = self.D4()
 
-        try:
-            volume = self.mesh.convex_hull.volume
-        except:
-            print("Couldn't get convex hull for this mesh")
+        type_faces = ""
 
         if self.mesh.faces.shape[1] == 3:
             type_faces = "triangles"
@@ -85,7 +94,7 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4
 
     def A3(self):
         vertices = self.mesh.vertices
@@ -114,10 +123,10 @@ class Object:
             sample = vertices[np.random.choice(vertices.shape[0], 1, replace=False)]
             distances.append(np.linalg.norm(sample - centroid))
 
-        bins = np.linspace(0, sqrt(3) / 2, BIN_COUNT)
+        bins = np.linspace(0, sqrt(3), BIN_COUNT)
         bin_counts = np.histogram(distances, bins)[0]
 
-        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+        # assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
         bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
@@ -134,7 +143,7 @@ class Object:
         bins = np.linspace(0, sqrt(3), BIN_COUNT)
         bin_counts = np.histogram(distances, bins)[0]
 
-        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+        # assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
         bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
@@ -159,7 +168,7 @@ class Object:
         bins = np.linspace(0, sqrt(0.5 * sqrt(3)), BIN_COUNT)
         bin_counts = np.histogram(square_rooted_areas, bins)[0]
 
-        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+        # assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
         bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
@@ -185,7 +194,7 @@ class Object:
         bins = np.linspace(0, (1/3)**(1/3), BIN_COUNT)
         bin_counts = np.histogram(cube_rooted_volumes, bins)[0]
 
-        assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
+        # assert sum(bin_counts) == SAMPLE_SIZE, f"Not all samples were binned properly: {sum(bin_counts)} not equal to {SAMPLE_SIZE}"
 
         bin_counts = list(bin_counts / np.linalg.norm(bin_counts))
 
@@ -205,10 +214,10 @@ class Object:
     def get_eigen(self):
         # Compute the covariance matrix for mesh
         A = np.transpose(self.mesh.vertices)
-        
+
         A_cov = np.cov(A)
 
-        # Compute eigenvalues and eigenvectors for covariance matrix  
+        # Compute eigenvalues and eigenvectors for covariance matrix
         eigenvalues, eigenvectors = np.linalg.eig(A_cov)
 
         # Get major, medium, minor eigenvectors by eigenvalue magnitude
@@ -219,7 +228,7 @@ class Object:
         major_eigenvector = eigenvectors[np.argmax(eigenvalues, axis=0)]
         medium_eigenvector = eigenvectors[indices[0]]
         minor_eigenvector = eigenvectors[np.argmin(eigenvalues, axis=0)]
- 
+
         # Fix e3 by replacing it with e1 × e2 (Tech Tips 3A)
         minor_eigenvector = np.cross(major_eigenvector, medium_eigenvector)
 
@@ -273,7 +282,7 @@ class Object:
         f = sum((self.mesh.triangles_center)*((self.mesh.triangles_center)**2))
 
         # Mirror mesh using scaling factors
-        self.mesh = trimesh.Trimesh((self.mesh.vertices * np.sign(f)), self.mesh.faces) 
+        self.mesh = trimesh.Trimesh((self.mesh.vertices * np.sign(f)), self.mesh.faces)
 
     def remesh_to(self, vertex_count, threshold):
         # Remesh the mesh such that the mesh has vertex_count +/- threshold vertices
