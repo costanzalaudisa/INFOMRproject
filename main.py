@@ -78,7 +78,7 @@ if args.info:
             print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
-    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
+    model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
 
     print("\r")
     print("#################")
