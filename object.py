@@ -66,12 +66,13 @@ class Object:
             compactness = surface ** 3 / (36 * math.pi * volume ** 2)
 
         # Calculate distances between 2 surface points over the entire mesh and pick the largest
-        diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
-        for i in range(len(self.mesh.vertices)):
-            for j in range(len(self.mesh.vertices)):
-                diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
-                if diff > diameter:
-                    diameter = diff
+        # Ignore, way too computationally expensive
+        # diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
+        # for i in range(len(self.mesh.vertices)):
+        #     for j in range(i, len(self.mesh.vertices)):
+        #         diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
+        #         if diff > diameter:
+        #             diameter = diff
 
         # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> NOTE!!! values seem weird, probably needs checking
         eigenvalues, eigenvectors = self.get_eigen()
@@ -241,8 +242,8 @@ class Object:
         self.process()                          # adjust meshes (remove duplicate faces, etc.)
         self.remesh_to(vertex_count, threshold) # remesh
         self.center()                           # translate barycenter to origin
-        #self.align()                            # compute eigenvectors and align with coordinate frame
-        #self.flip()                             # flip based on moment test
+        self.align()                            # compute eigenvectors and align with coordinate frame
+        self.flip()                             # flip based on moment test
         self.scale()                            # scale to unit volume
 
     def process(self):
