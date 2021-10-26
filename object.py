@@ -7,7 +7,7 @@ from pathlib import Path
 from math import sqrt
 
 SAMPLE_SIZE = 1000
-BIN_COUNT = 10
+BIN_COUNT = 15
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
@@ -66,13 +66,12 @@ class Object:
             compactness = surface ** 3 / (36 * math.pi * volume ** 2)
 
         # Calculate distances between 2 surface points over the entire mesh and pick the largest
-        # Ignore, way too computationally expensive
-        # diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
-        # for i in range(len(self.mesh.vertices)):
-        #     for j in range(i, len(self.mesh.vertices)):
-        #         diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
-        #         if diff > diameter:
-        #             diameter = diff
+        diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
+        for i in range(len(self.mesh.vertices)):
+            for j in range(i, len(self.mesh.vertices)):
+                diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
+                if diff > diameter:
+                    diameter = diff
 
         # Calculate eccentricity from eigenvalues (e1/e3 so major/minor) -> NOTE!!! values seem weird, probably needs checking
         eigenvalues, eigenvectors = self.get_eigen()
@@ -96,7 +95,7 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4
 
     def A3(self):
         vertices = self.mesh.vertices
