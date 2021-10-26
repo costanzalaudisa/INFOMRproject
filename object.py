@@ -7,7 +7,7 @@ from pathlib import Path
 from math import sqrt
 
 SAMPLE_SIZE = 1000
-BIN_COUNT = 10
+BIN_COUNT = 15
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
@@ -68,7 +68,7 @@ class Object:
         # Calculate distances between 2 surface points over the entire mesh and pick the largest
         diameter = np.linalg.norm(self.mesh.vertices[0] - self.mesh.vertices[1])
         for i in range(len(self.mesh.vertices)):
-            for j in range(len(self.mesh.vertices)):
+            for j in range(i, len(self.mesh.vertices)):
                 diff = np.linalg.norm(self.mesh.vertices[i] - self.mesh.vertices[j])
                 if diff > diameter:
                     diameter = diff

@@ -1,9 +1,11 @@
 import pandas as pd
 import trimesh
 import json
+import tqdm
 import sys
 import os
 
+from multiprocessing import Pool, cpu_count
 from object import Object
 from pathlib import Path
 
@@ -86,19 +88,21 @@ def get_db_info(dir):
     df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box"])
     df.to_csv("psb.csv", index=False)
 
-def generate_db(dir: Path, out_path: Path):
-    data = []
+def get_info(f):
+        return Object.load_mesh(f).get_info()
 
+def generate_db(dir: Path, out_path: Path):
     off_files = list(dir.glob(f"**/*{off_format}"))
     file_count = len(off_files)
 
-    for i, f in enumerate(off_files):
-        print(f"Getting data from file {i} of {file_count}", end="\r")
-        object = Object.load_mesh(f)
-        info = object.get_info()
-        data.append(info)
+    pool = Pool(cpu_count() - 1)
+
+    data = list(tqdm.tqdm(pool.imap_unordered(get_info, off_files), total=file_count))
+
+    pool.close()
+    pool.join()
 
     # Save data as Dataframe and export it to CSV file
-    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Barycenter", "Diagonal", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Eccentricity", "A3", "D1", "D2", "D3", "D4"])
+    df = pd.DataFrame(data, columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Barycenter", "Diagonal", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Diameter", "Eccentricity", "A3", "D1", "D2", "D3", "D4"])
     df = df.sort_values("Model number")
     df.to_csv(out_path, index=False)
