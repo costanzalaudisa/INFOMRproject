@@ -95,7 +95,7 @@ class Object:
             model_num = "N/A"
             label = "N/A"
 
-        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, eccentricity, A3, D1, D2, D3, D4
+        return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4
 
     def A3(self):
         vertices = self.mesh.vertices
@@ -241,8 +241,8 @@ class Object:
         self.process()                          # adjust meshes (remove duplicate faces, etc.)
         self.remesh_to(vertex_count, threshold) # remesh
         self.center()                           # translate barycenter to origin
-        #self.align()                            # compute eigenvectors and align with coordinate frame
-        #self.flip()                             # flip based on moment test
+        self.align()                            # compute eigenvectors and align with coordinate frame
+        self.flip()                             # flip based on moment test
         self.scale()                            # scale to unit volume
 
     def process(self):
