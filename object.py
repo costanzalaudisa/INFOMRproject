@@ -6,8 +6,10 @@ import math
 from pathlib import Path
 from math import sqrt
 
-SAMPLE_SIZE = 1000
+SAMPLE_SIZE = 10000
 BIN_COUNT = 15
+# Ensure that bin_count actually resolves to bin_count bins
+BIN_COUNT += 1
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
