@@ -6,6 +6,7 @@ from stats import plot_stats
 from object import Object
 from viewer import Viewer
 from pathlib import Path
+from query import query, normalize
 
 import matplotlib.pyplot as plt
 
@@ -25,6 +26,7 @@ parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selec
 parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model")
 parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model")
 parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset")
+parser.add_argument("-q", "--query", action="store_true", help="find similar shapes")
 
 args = parser.parse_args()
 
@@ -64,7 +66,7 @@ if args.generate_database:
 obj = None
 
 if args.object_id is None:
-    if args.info or args.view:
+    if args.info or args.view or args.query:
         print("No object was selected")
     exit()
 
@@ -168,3 +170,10 @@ if args.check_db:
     print("# Number of meshes with inconsistent winding:", winding_count, "out of", file_count)
     print("# Number of meshes with no outward facing normals:", normals_count, "out of", file_count)
     print("# Number of meshes with non-positive volume:", volume_count, "out of", file_count)
+
+if args.query:
+    if args.object_id is not None:
+        obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+    else:
+            print(f"No valid input was found.")
+    query(obj)
