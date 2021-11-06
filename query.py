@@ -15,18 +15,37 @@ def normalize(df):
         df[col] = df[col].str.replace("nan", "0")
         df[col] = df[col].apply(eval).apply(np.array)
 
-    df.replace(np.inf, np.finfo(np.float64).max, inplace=True)
-    df.replace(np.nan, 0, inplace=True)
+    # Drop models with NaNs and inf (better than replacing NaNs with 0 and inf with maximum value possible, as StandardScaler causes issues)
+    df.replace(np.inf, np.nan, inplace=True)
+    df.dropna(inplace=True)
 
     scaler = StandardScaler()
 
     # Standardize single-value features only
-    #print("BEFORE. Shape:", feature_df[col], "    |   values:", feature_df)
     for col in ["Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Diameter", "Eccentricity"]:
         X = df[col].values
         X = scaler.fit_transform(X.reshape(-1, 1))
         df[col] = X
-    #print("AFTER. Shape:", feature_df[col], "    |   values:", feature_df)
+
+    # Weight features 
+    TOTAL_FEATURES = 11
+    SINGLE_FEATURES = 6
+    HISTOGRAM_FEATURES = 5
+    GAP = 0.05 # 0.05
+    single_weight = ((1/2)-GAP)/SINGLE_FEATURES
+    histogram_weight = ((1/2)+GAP)/HISTOGRAM_FEATURES
+    print("Single weight:", single_weight, "    |   histogram weight:", histogram_weight)
+
+    # Ensure sum of weights sums up to 1
+    assert (single_weight*SINGLE_FEATURES)+(histogram_weight*HISTOGRAM_FEATURES) == 1.0
+
+    # Apply weight to single-value features first (weight should be smaller than histogram features)
+    for col in ["Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Diameter", "Eccentricity"]:
+        df[col] = df[col].apply(lambda x: x * single_weight)
+
+    # Apply weight to single-value features first (weight should be smaller than histogram features)
+    for col in ["A3", "D1", "D2", "D3", "D4"]:
+        df[col] = df[col].apply(lambda x: x * histogram_weight)
 
     # Calculate the feature vector for every entry in the dataset
     df["Feature Vector"] = df.apply(lambda x: np.array([x["Surface"], x["Compactness"], x["Bounding box volume"], x["Convex hull volume"], x["Diameter"], x["Eccentricity"], *x["A3"], *x["D1"], *x["D2"], *x["D3"], *x["D4"]]), axis=1)
