@@ -7,6 +7,7 @@ from pygame.locals import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+from typing import List, Union
 
 from object_renderer import ObjectRenderer, RenderMethod
 from utils import normalize_vector
@@ -27,10 +28,14 @@ KEY_MOVE_Y = np.array([0, 0.01, 0])
 
 class Viewer:
     # Initializer for the Viewer
-    def __init__(self, object: Object):
+    def __init__(self, objects: Union[Object, List[Object]]):
         # Set veriables to be used within the viewer
-        self.object = object
-        self.object_renderer = ObjectRenderer(object)
+        if type(objects) is list:
+            self.objects = objects
+        else:
+            self.objects = [objects]
+
+        self.object_renderers = list(map(ObjectRenderer, self.objects))
         self.clock = pg.time.Clock()
         self.keys_pressed_last_frame = []
 
@@ -59,9 +64,10 @@ class Viewer:
         for event in pg.event.get():
             # Close window when the red X is pressed
             if event.type == pg.QUIT:
-                del self.object_renderer
-                pg.quit()
-                quit()
+                for object_renderer in self.object_renderers:
+                    del object_renderer
+                    pg.quit()
+                    quit()
             elif event.type == pg.MOUSEBUTTONDOWN:
                 # Scroll down
                 if event.button == 4:
@@ -137,11 +143,15 @@ class Viewer:
                     self.angle_x = round(self.angle_x / 15) * 15
                     self.angle_y = round(self.angle_y / 15) * 15
                 if event.key == pg.K_PAGEUP and not self.keys_pressed_last_frame[pg.K_PAGEUP]:
-                    self.object.subdivide()
-                    self.object_renderer.update_vbos()
+                    for obj in self.objects:
+                        obj.subdivide()
+                    for object_renderer in self.object_renderers:
+                        object_renderer.update_vbos()
                 if event.key == pg.K_PAGEDOWN and not self.keys_pressed_last_frame[pg.K_PAGEDOWN]:
-                    self.object.simplify()
-                    self.object_renderer.update_vbos()
+                    for obj in self.objects:
+                        obj.simplify()
+                    for object_renderer in self.object_renderers:
+                        object_renderer.update_vbos()
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
@@ -194,7 +204,9 @@ class Viewer:
                 glEnd()
 
             # Render the object
-            self.object_renderer.render(self.render_method, self.wireframe)
+            for object_renderer in self.object_renderers:
+                object_renderer.render(self.render_method, self.wireframe)
+                glTranslatef(1, 0, 0)
 
             # Render to window
             pg.display.flip()
