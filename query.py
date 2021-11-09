@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
+from collections import defaultdict
 from scipy.spatial import distance
 from scipy.stats import wasserstein_distance
 
@@ -27,7 +27,7 @@ def normalize(df):
         X = scaler.fit_transform(X.reshape(-1, 1))
         df[col] = X
 
-    # Weight features 
+    # Weight features
     TOTAL_FEATURES = 11
     SINGLE_FEATURES = 6
     HISTOGRAM_FEATURES = 5
@@ -84,6 +84,10 @@ def query(obj):
     CD_matches = []
     EMD_matches = []
 
+    ED_label_matches = defaultdict(list)
+    CD_label_matches = defaultdict(list)
+    EMD_label_matches = defaultdict(list)
+
     for i, row in df.iterrows():
         vec = row["Feature Vector"]
         label = row["Label"]
@@ -94,8 +98,8 @@ def query(obj):
         df["Earth Mover's Distance"] = df.apply(lambda x: wasserstein_distance(x["Feature Vector"], vec), axis=1)
 
         ED_top_k = df.nsmallest(k + 1, "Euclidean Distance")
-        CD_top_k = df.nsmallest(k + 1, "Cosine Distance")        
-        EMD_top_k = df.nsmallest(k + 1, "Earth Mover's Distance")        
+        CD_top_k = df.nsmallest(k + 1, "Cosine Distance")
+        EMD_top_k = df.nsmallest(k + 1, "Earth Mover's Distance")
 
         ED_top_k = ED_top_k[ED_top_k["Model number"] != model_num]
         CD_top_k = CD_top_k[CD_top_k["Model number"] != model_num]
@@ -113,6 +117,10 @@ def query(obj):
         CD_matches.append(CD_match)
         EMD_matches.append(EMD_match)
 
+        ED_label_matches[label].append(ED_match)
+        CD_label_matches[label].append(CD_match)
+        EMD_label_matches[label].append(EMD_match)
+
         ED_match_counts.append(ED_match_count)
         CD_match_counts.append(CD_match_count)
         EMD_match_counts.append(EMD_match_count)
@@ -124,6 +132,10 @@ def query(obj):
     print("Avg: ", sum(ED_match_counts) / len(ED_match_counts))
     print("Correct matches: ", sum(ED_matches))
     print(f"Correct matches: {sum(ED_matches) / len(ED_match_counts) * 100: .2f}%")
+    ED_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in ED_label_matches.items()}
+    ED_label_matches = dict(sorted(ED_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in ED_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
 
     print("### COSINE DISTANCE ###")
@@ -133,6 +145,10 @@ def query(obj):
     print("Avg: ", sum(CD_match_counts) / len(CD_match_counts))
     print("Correct matches: ", sum(CD_matches))
     print(f"Correct matches: {sum(CD_matches) / len(CD_match_counts) * 100: .2f}%")
+    CD_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in CD_label_matches.items()}
+    CD_label_matches = dict(sorted(CD_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in CD_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
 
     print("### EARTH MOVER'S DISTANCE ###")
@@ -142,4 +158,8 @@ def query(obj):
     print("Avg: ", sum(EMD_match_counts) / len(EMD_match_counts))
     print("Correct matches: ", sum(EMD_matches))
     print(f"Correct matches: {sum(EMD_matches) / len(EMD_match_counts) * 100: .2f}%")
+    EMD_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in EMD_label_matches.items()}
+    EMD_label_matches = dict(sorted(EMD_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in EMD_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
