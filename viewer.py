@@ -1,3 +1,6 @@
+from os import environ
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
 import pygame as pg
 import numpy as np
 import math
@@ -43,10 +46,14 @@ class Viewer:
         self.wireframe = True
         self.axis_shown = False
 
+        self.has_quit = False
+
+        caption = "Model #" + str(self.object.model_num) + " - label: " + self.object.label
+
         # Initialize a window
         pg.init()
         pg.display.set_mode((W,H), DOUBLEBUF|OPENGL|RESIZABLE)
-        pg.display.set_caption("INFOMR Viewer")
+        pg.display.set_caption(caption)
         pg.key.set_repeat(int(1000 / FPS))
 
         # Set the perspective and move the "camera" back
@@ -59,9 +66,9 @@ class Viewer:
         for event in pg.event.get():
             # Close window when the red X is pressed
             if event.type == pg.QUIT:
-                del self.object_renderer
-                pg.quit()
-                quit()
+                #del self.object_renderer
+                self.has_quit = True
+                #pg.quit()
             elif event.type == pg.MOUSEBUTTONDOWN:
                 # Scroll down
                 if event.button == 4:
@@ -154,6 +161,9 @@ class Viewer:
         while True:
             # Handle all pygame events
             self.handleEvents()
+
+            if self.has_quit:
+                break
 
             # Limit FPS
             self.clock.tick(FPS)

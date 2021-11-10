@@ -6,7 +6,7 @@ from stats import plot_stats
 from object import Object
 from viewer import Viewer
 from pathlib import Path
-from query import query, normalize
+from query import query, normalize, build_ann, get_query_accuracy
 
 import matplotlib.pyplot as plt
 
@@ -17,16 +17,18 @@ ORIGINAL_DB = Path("./psb_orig.csv")
 PROCESSED_DB = Path("./psb_proc.csv")
 
 parser = argparse.ArgumentParser(description="INFOMR Project")
-parser.add_argument("-p", "--pre-process", action="store_true", help="pre-process all models")
-parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt")
-parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed")
-parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed")
-parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on")
-parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model")
-parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model")
-parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model")
-parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset")
-parser.add_argument("-q", "--query", action="store_true", help="find similar shapes")
+parser.add_argument("-p", "--pre-process", action="store_true", help="pre-process all models.")
+parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt file.")
+parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed.")
+parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed.")
+parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on.")
+parser.add_argument("k_value", type=int, nargs='?', default=5, help="k-value for the query.")
+parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model. Usage: {database} {model number}.")
+parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model. Usage: {database} {model number}.")
+parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model. Usage: {database} {model number}.")
+parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset. Usage: {database} {model number}.")
+parser.add_argument("-q", "--query", choices=["ed", "cd", "emd", "ann"], help="find similar shapes ('ed' for Euclidean distance, 'cd' for Cosine distance, 'emd' for Earth Mover's distance, 'ann' for ANN (on Manhattan distance). Usage: {metric} {model number} {k value}.")
+parser.add_argument("-a", "--accuracy", action="store_true", help="get accuracy of distance functions.")
 
 args = parser.parse_args()
 
@@ -68,6 +70,11 @@ obj = None
 if args.object_id is None:
     if args.info or args.view or args.query:
         print("No object was selected")
+    exit()
+
+if args.k_value is None:
+    if args.info or args.view or args.query:
+        print("No k-value was selected")
     exit()
 
 if args.info:
@@ -173,7 +180,19 @@ if args.check_db:
 
 if args.query:
     if args.object_id is not None:
-        obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-    else:
-            print(f"No valid input was found.")
-    query(obj)
+        if args.k_value is not None:
+            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+
+            if args.query.lower() == "ed":
+                query(obj, 'ed', args.k_value)
+            elif args.query.lower() == "cd":
+                query(obj, 'cd', args.k_value)
+            elif args.query.lower() == "emd":
+                query(obj, 'emd', args.k_value)
+            elif args.query.lower() == "ann":
+                query(obj, 'ann', args.k_value)
+            else:
+                print(f"No valid input was found, {args.query} does not equal `ed`, `cd`, `emd` or `ann`.")
+    
+if args.accuracy:           
+    get_query_accuracy(str(PROCESSED_DB))
