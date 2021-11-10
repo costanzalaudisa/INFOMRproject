@@ -152,50 +152,52 @@ def query(obj, dist, k):
         viewer = Viewer(obj)
         viewer.mainLoop()
 
-def get_query_accuracy(db_path):
-    print("Calculating accuracy... (Warning: might take several minutes.)")
+def get_query_accuracy(db_path, k):
+    print("Calculating accuracy for k=" + str(k) + "... (Warning: might take several minutes.)")
 
     # Gather processed dataset and normalize
     df = pd.read_csv(db_path)
     df = normalize(df)
 
     # Define K
-    k = 10
+    K = k
 
     # Calculate KNN's accuracy over different distance metrics
     metrics = ["angular", "euclidean", "manhattan", "hamming", "dot"]
     for metric in metrics:
         ann = build_ann(metric)
 
-        KNN_match_counts = []
-        KNN_matches = []
+        ANN_match_counts = []
+        ANN_matches = []
 
-        KNN_label_matches = defaultdict(list)
+        ANN_label_matches = defaultdict(list)
 
         for model_num in df['Model number']:
             vec = df['Feature Vector'].loc[df['Model number'] == model_num].iloc[0]
             label = df['Label'].loc[df['Model number'] == model_num].iloc[0]
             model_num = df['Model number'].loc[df['Model number'] == model_num].iloc[0]
 
-            KNN = ann.get_nns_by_item(model_num, k+1, include_distances=True)
-            KNN_top_k = df[df['Model number'].isin(KNN[0])]
-            KNN_top_k = KNN_top_k[KNN_top_k["Model number"] != model_num]
-            KNN_match_count = len(KNN_top_k[KNN_top_k["Label"] == label])
-            KNN_match = max(set(KNN_top_k["Label"]), key = list(KNN_top_k["Label"]).count) == label
-            KNN_matches.append(KNN_match)
-            KNN_match_counts.append(KNN_match_count)
-            KNN_label_matches[label].append(KNN_match)
+            ANN = ann.get_nns_by_item(model_num, K+1, include_distances=True)
+            ANN_top_k = df[df['Model number'].isin(ANN[0])]
+            ANN_top_k = ANN_top_k[ANN_top_k["Model number"] != model_num]
+            ANN_match_count = len(ANN_top_k[ANN_top_k["Label"] == label])
+            ANN_match = max(set(ANN_top_k["Label"]), key = list(ANN_top_k["Label"]).count) == label
+            ANN_matches.append(ANN_match)
+            ANN_match_counts.append(ANN_match_count)
+            ANN_label_matches[label].append(ANN_match)
 
         print("### ANN ACCURACY, metric:", metric, "###")
-        print("Count: ", len(KNN_match_counts))
-        print("Max: ", max(KNN_match_counts))
-        print("Min: ", min(KNN_match_counts))
-        print("Avg: ", sum(KNN_match_counts) / len(KNN_match_counts))
-        print("Correct matches: ", sum(KNN_matches))
-        print(f"Correct matches: {sum(KNN_matches) / len(KNN_match_counts) * 100: .2f}%")
-        KNN_label_matches = {key:sum(v) / len(v) * 100 for (key, v) in KNN_label_matches.items()}
-        KNN_label_matches = dict(sorted(KNN_label_matches.items(), key=lambda item: item[1], reverse=True))
-        for key, v in KNN_label_matches.items():
+        print("Count: ", len(ANN_match_counts))
+        print("Max: ", max(ANN_match_counts))
+        print("Min: ", min(ANN_match_counts))
+        print("Avg: ", sum(ANN_match_counts) / len(ANN_match_counts))
+        print("Correct matches: ", sum(ANN_matches))
+        print(f"Correct matches: {sum(ANN_matches) / len(ANN_match_counts) * 100: .2f}%")
+        
+        # Print accuracy per label
+        ANN_label_matches = {key:sum(v) / len(v) * 100 for (key, v) in ANN_label_matches.items()}
+        ANN_label_matches = dict(sorted(ANN_label_matches.items(), key=lambda item: item[1], reverse=True))
+        for key, v in ANN_label_matches.items():
             print(f"Label {key}: {v: .2f}%")
         print("--------------------------------")
 
@@ -203,12 +205,10 @@ def get_query_accuracy(db_path):
     ED_match_counts = []
     CD_match_counts = []
     EMD_match_counts = []
-    KNN_match_counts = []
 
     ED_matches = []
     CD_matches = []
     EMD_matches = []
-    KNN_matches = []
 
     ED_label_matches = defaultdict(list)
     CD_label_matches = defaultdict(list)
@@ -226,9 +226,9 @@ def get_query_accuracy(db_path):
         KNN = ann.get_nns_by_item(model_num, k+1, include_distances=True)
 
         # Pick k+1 nearest neighbor
-        ED_top_k = df.nsmallest(k + 1, "Euclidean Distance")
-        CD_top_k = df.nsmallest(k + 1, "Cosine Distance")
-        EMD_top_k = df.nsmallest(k + 1, "Earth Mover's Distance")
+        ED_top_k = df.nsmallest(K + 1, "Euclidean Distance")
+        CD_top_k = df.nsmallest(K + 1, "Cosine Distance")
+        EMD_top_k = df.nsmallest(K + 1, "Earth Mover's Distance")
 
         ED_top_k = ED_top_k[ED_top_k["Model number"] != model_num]
         CD_top_k = CD_top_k[CD_top_k["Model number"] != model_num]
@@ -294,3 +294,5 @@ def get_query_accuracy(db_path):
     for k, v in EMD_label_matches.items():
         print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
+
+

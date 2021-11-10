@@ -28,7 +28,7 @@ parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected mode
 parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model. Usage: {database} {model number}.")
 parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset. Usage: {database} {model number}.")
 parser.add_argument("-q", "--query", choices=["ed", "cd", "emd", "ann"], help="find similar shapes ('ed' for Euclidean distance, 'cd' for Cosine distance, 'emd' for Earth Mover's distance, 'ann' for ANN (on Manhattan distance). Usage: {metric} {model number} {k value}.")
-parser.add_argument("-a", "--accuracy", action="store_true", help="get accuracy of distance functions.")
+parser.add_argument("-a", "--accuracy", type=int, help="get accuracy of distance functions.")
 
 args = parser.parse_args()
 
@@ -195,4 +195,5 @@ if args.query:
                 print(f"No valid input was found, {args.query} does not equal `ed`, `cd`, `emd` or `ann`.")
     
 if args.accuracy:           
-    get_query_accuracy(str(PROCESSED_DB))
+    if args.accuracy is not None:
+        get_query_accuracy(str(PROCESSED_DB), args.accuracy)
