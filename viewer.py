@@ -10,7 +10,6 @@ from pygame.locals import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
-from typing import List, Union
 
 from object_renderer import ObjectRenderer, RenderMethod
 from utils import normalize_vector
@@ -31,14 +30,10 @@ KEY_MOVE_Y = np.array([0, 0.01, 0])
 
 class Viewer:
     # Initializer for the Viewer
-    def __init__(self, objects: Union[Object, List[Object]]):
+    def __init__(self, object: Object):
         # Set veriables to be used within the viewer
-        if type(objects) is list:
-            self.objects = objects
-        else:
-            self.objects = [objects]
-
-        self.object_renderers = list(map(ObjectRenderer, self.objects))
+        self.object = object
+        self.object_renderer = ObjectRenderer(object)
         self.clock = pg.time.Clock()
         self.keys_pressed_last_frame = []
 
@@ -71,9 +66,10 @@ class Viewer:
         for event in pg.event.get():
             # Close window when the red X is pressed
             if event.type == pg.QUIT:
+                del self.object_renderer
                 self.has_quit = True
-                for object_renderer in self.object_renderers:
-                    del object_renderer
+                pg.quit()
+                return
             elif event.type == pg.MOUSEBUTTONDOWN:
                 # Scroll down
                 if event.button == 4:
@@ -149,15 +145,11 @@ class Viewer:
                     self.angle_x = round(self.angle_x / 15) * 15
                     self.angle_y = round(self.angle_y / 15) * 15
                 if event.key == pg.K_PAGEUP and not self.keys_pressed_last_frame[pg.K_PAGEUP]:
-                    for obj in self.objects:
-                        obj.subdivide()
-                    for object_renderer in self.object_renderers:
-                        object_renderer.update_vbos()
+                    self.object.subdivide()
+                    self.object_renderer.update_vbos()
                 if event.key == pg.K_PAGEDOWN and not self.keys_pressed_last_frame[pg.K_PAGEDOWN]:
-                    for obj in self.objects:
-                        obj.simplify()
-                    for object_renderer in self.object_renderers:
-                        object_renderer.update_vbos()
+                    self.object.simplify()
+                    self.object_renderer.update_vbos()
             if event.type == pg.VIDEORESIZE:
                 glMatrixMode(GL_PROJECTION)
                 glLoadIdentity()
@@ -202,20 +194,18 @@ class Viewer:
             if self.axis_shown:
                 glBegin(GL_LINES)
                 glColor3f(1.0, 0.0, 0.0)
-                glVertex3f(2**32, 0.0, 0.0)
-                glVertex3f(-2**32, 0.0, 0.0)
+                glVertex3f(2**16, 0.0, 0.0)
+                glVertex3f(-2**16, 0.0, 0.0)
                 glColor3f(0.0, 0.0, 1.0)
-                glVertex3f(0.0, 2**32, 0.0)
-                glVertex3f(0.0, -2**32, 0.0)
+                glVertex3f(0.0, 2**16, 0.0)
+                glVertex3f(0.0, -2**16, 0.0)
                 glColor3f(0.0, 1.0, 0.0)
-                glVertex3f(0.0, 0.0, 2**32)
-                glVertex3f(0.0, 0.0, -2**32)
+                glVertex3f(0.0, 0.0, 2**16)
+                glVertex3f(0.0, 0.0, -2**16)
                 glEnd()
 
             # Render the object
-            for object_renderer in self.object_renderers:
-                object_renderer.render(self.render_method, self.wireframe)
-                glTranslatef(1, 0, 0)
+            self.object_renderer.render(self.render_method, self.wireframe)
 
             # Render to window
             pg.display.flip()

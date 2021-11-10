@@ -86,7 +86,7 @@ def build_ann(metric):
 
 def query(obj, dist, k):
     K = k
-    view_object = False
+    view_object = True
 
     if view_object:
         viewer = Viewer(obj)
