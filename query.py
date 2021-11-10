@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pygame as pg
 from pathlib import Path
 
 from sklearn.preprocessing import StandardScaler
 
+from collections import defaultdict
 from scipy.spatial import distance
 from scipy.stats import wasserstein_distance
 
@@ -32,7 +32,7 @@ def normalize(df):
         X = scaler.fit_transform(X.reshape(-1, 1))
         df[col] = X
 
-    # Weight features 
+    # Weight features
     TOTAL_FEATURES = 11
     SINGLE_FEATURES = 6
     HISTOGRAM_FEATURES = 5
@@ -73,7 +73,7 @@ def build_ann(metric):
     # Build ANN
     ann = AnnoyIndex(FEATURE_NUM, METRIC)
     ann.set_seed(SEED)
-    
+
     # NOTE: ANN fills missing models with all zeros
     for model_num in df['Model number']:
         vec = df['Feature Vector'].loc[df['Model number'] == model_num].iloc[0]
@@ -81,7 +81,7 @@ def build_ann(metric):
     ann.build(N_TREES)
 
     return ann
- 
+
  #print(ann.get_nns_by_item(MODEL_NUM, K, include_distances=True)) # will find the K nearest neighbors
 
 def query(obj, dist, k):
@@ -160,7 +160,7 @@ def get_query_accuracy(db_path):
     df = normalize(df)
 
     # Define K
-    k = 5
+    k = 10
 
     # Calculate KNN's accuracy over different distance metrics
     metrics = ["angular", "euclidean", "manhattan", "hamming", "dot"]
@@ -169,6 +169,8 @@ def get_query_accuracy(db_path):
 
         KNN_match_counts = []
         KNN_matches = []
+
+        KNN_label_matches = defaultdict(list)
 
         for model_num in df['Model number']:
             vec = df['Feature Vector'].loc[df['Model number'] == model_num].iloc[0]
@@ -182,6 +184,7 @@ def get_query_accuracy(db_path):
             KNN_match = max(set(KNN_top_k["Label"]), key = list(KNN_top_k["Label"]).count) == label
             KNN_matches.append(KNN_match)
             KNN_match_counts.append(KNN_match_count)
+            KNN_label_matches[label].append(KNN_match)
 
         print("### ANN ACCURACY, metric:", metric, "###")
         print("Count: ", len(KNN_match_counts))
@@ -190,8 +193,12 @@ def get_query_accuracy(db_path):
         print("Avg: ", sum(KNN_match_counts) / len(KNN_match_counts))
         print("Correct matches: ", sum(KNN_matches))
         print(f"Correct matches: {sum(KNN_matches) / len(KNN_match_counts) * 100: .2f}%")
+        KNN_label_matches = {key:sum(v) / len(v) * 100 for (key, v) in KNN_label_matches.items()}
+        KNN_label_matches = dict(sorted(KNN_label_matches.items(), key=lambda item: item[1], reverse=True))
+        for key, v in KNN_label_matches.items():
+            print(f"Label {key}: {v: .2f}%")
         print("--------------------------------")
-      
+
     # Calculate accuracy of distance functions
     ED_match_counts = []
     CD_match_counts = []
@@ -202,6 +209,10 @@ def get_query_accuracy(db_path):
     CD_matches = []
     EMD_matches = []
     KNN_matches = []
+
+    ED_label_matches = defaultdict(list)
+    CD_label_matches = defaultdict(list)
+    EMD_label_matches = defaultdict(list)
 
     for i, row in df.iterrows():
         vec = row["Feature Vector"]
@@ -216,32 +227,35 @@ def get_query_accuracy(db_path):
 
         # Pick k+1 nearest neighbor
         ED_top_k = df.nsmallest(k + 1, "Euclidean Distance")
-        CD_top_k = df.nsmallest(k + 1, "Cosine Distance")        
+        CD_top_k = df.nsmallest(k + 1, "Cosine Distance")
         EMD_top_k = df.nsmallest(k + 1, "Earth Mover's Distance")
-        
-        # Remove the query model from query
+
         ED_top_k = ED_top_k[ED_top_k["Model number"] != model_num]
         CD_top_k = CD_top_k[CD_top_k["Model number"] != model_num]
         EMD_top_k = EMD_top_k[EMD_top_k["Model number"] != model_num]
-        
+
         # Count how many k-nearest neighbors match the query model's label
         ED_match_count = len(ED_top_k[ED_top_k["Label"] == label])
         CD_match_count = len(CD_top_k[CD_top_k["Label"] == label])
         EMD_match_count = len(EMD_top_k[EMD_top_k["Label"] == label])
-        
+
         # Return count of matches by label
         ED_match = max(set(ED_top_k["Label"]), key = list(ED_top_k["Label"]).count) == label
         CD_match = max(set(CD_top_k["Label"]), key = list(CD_top_k["Label"]).count) == label
         EMD_match = max(set(EMD_top_k["Label"]), key = list(EMD_top_k["Label"]).count) == label
-        
+
         ED_matches.append(ED_match)
         CD_matches.append(CD_match)
         EMD_matches.append(EMD_match)
-        
+
+        ED_label_matches[label].append(ED_match)
+        CD_label_matches[label].append(CD_match)
+        EMD_label_matches[label].append(EMD_match)
+
         ED_match_counts.append(ED_match_count)
         CD_match_counts.append(CD_match_count)
         EMD_match_counts.append(EMD_match_count)
-        
+
     print("### EUCLIDEAN DISTANCE'S ACCURACY ###")
     print("Count: ", len(ED_match_counts))
     print("Max: ", max(ED_match_counts))
@@ -249,6 +263,10 @@ def get_query_accuracy(db_path):
     print("Avg: ", sum(ED_match_counts) / len(ED_match_counts))
     print("Correct matches: ", sum(ED_matches))
     print(f"Correct matches: {sum(ED_matches) / len(ED_match_counts) * 100: .2f}%")
+    ED_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in ED_label_matches.items()}
+    ED_label_matches = dict(sorted(ED_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in ED_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
 
     print("### COSINE DISTANCE'S ACCURACY ###")
@@ -258,6 +276,10 @@ def get_query_accuracy(db_path):
     print("Avg: ", sum(CD_match_counts) / len(CD_match_counts))
     print("Correct matches: ", sum(CD_matches))
     print(f"Correct matches: {sum(CD_matches) / len(CD_match_counts) * 100: .2f}%")
+    CD_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in CD_label_matches.items()}
+    CD_label_matches = dict(sorted(CD_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in CD_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
 
     print("### EARTH MOVER'S DISTANCE'S ACCURACY ###")
@@ -267,4 +289,8 @@ def get_query_accuracy(db_path):
     print("Avg: ", sum(EMD_match_counts) / len(EMD_match_counts))
     print("Correct matches: ", sum(EMD_matches))
     print(f"Correct matches: {sum(EMD_matches) / len(EMD_match_counts) * 100: .2f}%")
+    EMD_label_matches = {k:sum(v) / len(v) * 100 for (k, v) in EMD_label_matches.items()}
+    EMD_label_matches = dict(sorted(EMD_label_matches.items(), key=lambda item: item[1], reverse=True))
+    for k, v in EMD_label_matches.items():
+        print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
