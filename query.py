@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -92,13 +93,27 @@ def query(obj, dist, k):
         viewer = Viewer(obj)
         viewer.mainLoop()
 
+    if obj.label is None:
+        obj.label = "unkown"
+
+    if obj.model_num is None:
+        obj.model_num = 9999
+
     print("### QUERY SHAPE: model #" + str(obj.model_num) + " - label: " + obj.label + " ###")
     print("\r")
 
     # Normalize features and gather model's feature_vector
     df = pd.read_csv("./psb_proc.csv")
+    if obj.model_num == 9999:
+        df2 = pd.DataFrame([obj.get_info()], columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Barycenter", "Diagonal", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Diameter", "Eccentricity", "A3", "D1", "D2", "D3", "D4"])
+        df2.to_csv("tmp.csv", index=False)
+        df2 = pd.read_csv("tmp.csv")
+        os.remove("tmp.csv")
+        df.append(df2)
+        df = df.sort_values("Model number")
     df = normalize(df)
     fv = df.loc[df['Model number'] == obj.model_num]
+    # TODO: Figure out why this is failing
     feature_vector = np.array([fv['Surface'].iloc[0], fv['Compactness'].iloc[0], fv['Bounding box volume'].iloc[0], fv['Convex hull volume'].iloc[0], fv['Diameter'].iloc[0], fv['Eccentricity'].iloc[0], *fv['A3'].iloc[0], *fv['D1'].iloc[0], *fv['D2'].iloc[0], *fv['D3'].iloc[0], *fv['D4'].iloc[0]])
 
     # Calculate the distance of each object in the shapebase to the feature vector using a euclidean distance metric
@@ -193,7 +208,7 @@ def get_query_accuracy(db_path, k):
         print("Avg: ", sum(ANN_match_counts) / len(ANN_match_counts))
         print("Correct matches: ", sum(ANN_matches))
         print(f"Correct matches: {sum(ANN_matches) / len(ANN_match_counts) * 100: .2f}%")
-        
+
         # Print accuracy per label
         ANN_label_matches = {key:sum(v) / len(v) * 100 for (key, v) in ANN_label_matches.items()}
         ANN_label_matches = dict(sorted(ANN_label_matches.items(), key=lambda item: item[1], reverse=True))
@@ -294,5 +309,3 @@ def get_query_accuracy(db_path, k):
     for k, v in EMD_label_matches.items():
         print(f"Label {k}: {v: .2f}%")
     print("--------------------------------")
-
-

@@ -25,8 +25,11 @@ class Object:
         # Load a mesh and return it as an Object
         mesh = trimesh.load(path, force="mesh")
 
-        # Get model num from path
-        model_num = int(path.name.split(".")[0].split("m")[1])
+        if path.name.startswith("m"):
+            # Get model num from path
+            model_num = int(path.name.split(".")[0].split("m")[1])
+        else:
+            model_num = None
 
         # Get label from model num
         label = None
