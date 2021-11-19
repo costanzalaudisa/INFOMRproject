@@ -97,7 +97,7 @@ def query(obj, dist, k):
         obj.label = "unkown"
 
     if obj.model_num is None:
-        obj.model_num = 9999
+        obj.model_num = 1814
 
     print("### QUERY SHAPE: model #" + str(obj.model_num) + " - label: " + obj.label + " ###")
     print("\r")
@@ -109,11 +109,11 @@ def query(obj, dist, k):
         df2.to_csv("tmp.csv", index=False)
         df2 = pd.read_csv("tmp.csv")
         os.remove("tmp.csv")
-        df.append(df2)
+        df = df.append(df2)
         df = df.sort_values("Model number")
+        df.reset_index(drop=True, inplace=True)
     df = normalize(df)
     fv = df.loc[df['Model number'] == obj.model_num]
-    # TODO: Figure out why this is failing
     feature_vector = np.array([fv['Surface'].iloc[0], fv['Compactness'].iloc[0], fv['Bounding box volume'].iloc[0], fv['Convex hull volume'].iloc[0], fv['Diameter'].iloc[0], fv['Eccentricity'].iloc[0], *fv['A3'].iloc[0], *fv['D1'].iloc[0], *fv['D2'].iloc[0], *fv['D3'].iloc[0], *fv['D4'].iloc[0]])
 
     # Calculate the distance of each object in the shapebase to the feature vector using a euclidean distance metric
