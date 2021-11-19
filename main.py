@@ -21,7 +21,7 @@ parser.add_argument("-p", "--pre-process", action="store_true", help="pre-proces
 parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt file.")
 parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed.")
 parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed.")
-parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on.")
+parser.add_argument("object_id", type=str, nargs='?', default="0", help="id of the pre-processed model to perform operations on.")
 parser.add_argument("k_value", type=int, nargs='?', default=5, help="k-value for the query.")
 parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model. Usage: {database} {model number}.")
 parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model. Usage: {database} {model number}.")
@@ -79,13 +79,22 @@ if args.k_value is None:
 
 if args.info:
     if args.object_id is not None:
-        if args.info.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.info.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.info.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.info.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
-
+            # Assume object_id is a path
+            if args.info.lower() == "o":
+                obj = Object.load_mesh(args.object_id)
+            elif args.info.lower() == "p":
+                obj = Object.load_mesh(args.object_id)
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
     # Print info on the selected mesh
     model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
 
@@ -113,12 +122,22 @@ if args.info:
 
 if args.view:
     if args.object_id is not None:
-        if args.view.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.view.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.view.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.view.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")                           
+            # Assume object_id is a path
+            if args.view.lower() == "o":
+                obj = Object.load_mesh(Path(args.object_id))
+            elif args.view.lower() == "p":
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
 
     # View the selected mesh
     viewer = Viewer(obj)
@@ -126,12 +145,22 @@ if args.view:
 
 if args.check_model:
     if args.object_id is not None:
-        if args.check_model.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.check_model.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.check_model.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.check_model.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.check_model} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
+            # Assume object_id is a path
+            if args.check_model.lower() == "o":
+                obj = Object.load_mesh(Path(args.object_id))
+            elif args.check_model.lower() == "p":
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.check_model} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
     model_num, watertight, winding, normals, pos_volume = obj.check_model()
@@ -181,7 +210,11 @@ if args.check_db:
 if args.query:
     if args.object_id is not None:
         if args.k_value is not None:
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            if args.object_id.isnumeric():
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else: # Assume object_id is a path
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
 
             if args.query.lower() == "ed":
                 query(obj, 'ed', args.k_value)
@@ -193,7 +226,7 @@ if args.query:
                 query(obj, 'ann', args.k_value)
             else:
                 print(f"No valid input was found, {args.query} does not equal `ed`, `cd`, `emd` or `ann`.")
-    
-if args.accuracy:           
+
+if args.accuracy:
     if args.accuracy is not None:
         get_query_accuracy(str(PROCESSED_DB), args.accuracy)
