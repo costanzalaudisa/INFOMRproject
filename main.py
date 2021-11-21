@@ -6,7 +6,7 @@ from stats import plot_stats
 from object import Object
 from viewer import Viewer
 from pathlib import Path
-from query import query, normalize
+from query import query, get_query_accuracy
 
 import matplotlib.pyplot as plt
 
@@ -17,19 +17,22 @@ ORIGINAL_DB = Path("./psb_orig.csv")
 PROCESSED_DB = Path("./psb_proc.csv")
 
 parser = argparse.ArgumentParser(description="INFOMR Project")
-parser.add_argument("-p", "--pre-process", action="store_true", help="pre-process all models")
-parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt")
-parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed")
-parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed")
-parser.add_argument("object_id", type=int, nargs='?', default=0, help="id of the pre-processed model to perform operations on")
-parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model")
-parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model")
-parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model")
-parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset")
-parser.add_argument("-q", "--query", action="store_true", help="find similar shapes")
+parser.add_argument("-p", "--pre-process", action="store_true", help="pre-process all models.")
+parser.add_argument("-c", "--generate-classes", action="store_true", help="generate the classes.txt file.")
+parser.add_argument("-s", "--plot-stats", choices=["o", "p"], help="plot stats saved in the db for either (o)riginal or (p)rocessed.")
+parser.add_argument("-g", "--generate-database", choices=["o", "p"], help="generate database for either (o)riginal or (p)rocessed.")
+parser.add_argument("object_id", type=str, nargs='?', default="0", help="id of the pre-processed model to perform operations on.")
+parser.add_argument("k_value", type=int, nargs='?', default=5, help="k-value for the query.")
+parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selected model. Usage: {database} {model number}.")
+parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model. Usage: {database} {model number}.")
+parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model. Usage: {database} {model number}.")
+parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset. Usage: {database} {model number}.")
+parser.add_argument("-q", "--query", choices=["ed", "cd", "emd", "ann"], help="find similar shapes ('ed' for Euclidean distance, 'cd' for Cosine distance, 'emd' for Earth Mover's distance, 'ann' for ANN (on Manhattan distance). Usage: {metric} {model number} {k value}.")
+parser.add_argument("-a", "--accuracy", type=int, help="get accuracy of distance functions.")
 
 args = parser.parse_args()
 
+# Terminal command to start original dataset's pre-processing and cleaning
 if args.pre_process:
      # Get all off_files in this directory
     off_files = list(ORIGINAL_MODEL_DIR.glob("**/*.off"))
@@ -41,9 +44,11 @@ if args.pre_process:
         object.preprocess(VERTEX_COUNT, THRESHOLD)
         object.save_mesh(PROCESSED_MODEL_DIR / f.name)
 
+# Terminal command to extract the dataset's classes
 if args.generate_classes:
     define_classes(list(Path("./classes").iterdir()))
 
+# Terminal command to gather stats on the original or processed dataset
 if args.plot_stats:
     if args.plot_stats.lower() == "o":
         plot_stats(ORIGINAL_DB)
@@ -52,6 +57,7 @@ if args.plot_stats:
     else:
         print(f"No valid input was found, {args.plot_stats} does not equal, `o` or `p`.")
 
+# Terminal command to generate feature CSV for either original or processed dataset
 if args.generate_database:
     if args.generate_database.lower() == "o":
         generate_db(ORIGINAL_MODEL_DIR, ORIGINAL_DB)
@@ -66,19 +72,34 @@ if args.generate_database:
 obj = None
 
 if args.object_id is None:
-    if args.info or args.view or args.query:
+    if args.info or args.view or args.check_model or args.query:
         print("No object was selected")
     exit()
 
+if args.k_value is None:
+    if args.query:
+        print("No k-value was selected")
+    exit()
+
+# Terminal command to retrieve a mesh's info and features
 if args.info:
     if args.object_id is not None:
-        if args.info.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.info.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.info.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.info.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
-
+            # Assume object_id is a path
+            if args.info.lower() == "o":
+                obj = Object.load_mesh(args.object_id)
+            elif args.info.lower() == "p":
+                obj = Object.load_mesh(args.object_id)
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
     # Print info on the selected mesh
     model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4 = obj.get_info()
 
@@ -93,38 +114,71 @@ if args.info:
     print("Number of edges:", num_edges)
     print("Type of faces:", type_faces)
     print("Bounding box:", bounding_box)
+
     print("\r")
-    print("################")
-    print("### FEATURES ###")
-    print("################")
+    print("#############################")
+    print("### SINGLE-VALUE FEATURES ###")
+    print("#############################")
     print("Surface area:", surface)
     print("Bounding box volume:", bounding_box_volume)
     print("Mesh volume:", volume)
     print("Compactness:", compactness)
     print("Diameter:", diameter)
-    print("Eccentricity", eccentricity)
+    print("Eccentricity:", eccentricity)
 
+    print("\r")
+    print("##########################")
+    print("### HISTOGRAM FEATURES ###")
+    print("##########################")
+    print("A3:", A3)
+    print("D1:", D1)
+    print("D2:", D2)
+    print("D3:", D3)
+    print("D4:", D4)
+
+# Terminal command to visualize a mesh
 if args.view:
     if args.object_id is not None:
-        if args.view.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.view.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.view.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.view.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")                           
+            # Assume object_id is a path
+            if args.view.lower() == "o":
+                obj = Object.load_mesh(Path(args.object_id))
+            elif args.view.lower() == "p":
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.view} does not equal, `o` or `p`.")
 
     # View the selected mesh
     viewer = Viewer(obj)
     viewer.mainLoop()
 
+# Terminal command to run various checks on a mesh (watertightness, consistent winding, outward facing normals, ...)
 if args.check_model:
     if args.object_id is not None:
-        if args.check_model.lower() == "o":
-            obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-        elif args.check_model.lower() == "p":
-            obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+        if args.object_id.isnumeric():
+            if args.check_model.lower() == "o":
+                obj = Object.load_mesh(list(ORIGINAL_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            elif args.check_model.lower() == "p":
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else:
+                print(f"No valid input was found, {args.check_model} does not equal, `o` or `p`.")
         else:
-            print(f"No valid input was found, {args.info} does not equal, `o` or `p`.")
+            # Assume object_id is a path
+            if args.check_model.lower() == "o":
+                obj = Object.load_mesh(Path(args.object_id))
+            elif args.check_model.lower() == "p":
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+            else:
+                print(f"No valid input was found, {args.check_model} does not equal, `o` or `p`.")
 
     # Print info on the selected mesh
     model_num, watertight, winding, normals, pos_volume = obj.check_model()
@@ -135,6 +189,7 @@ if args.check_model:
     print("Does mesh have outward facing normals?", watertight)
     print("Does mesh have positive volume?", pos_volume)
 
+# Terminal command to run various checks on the entire database (watertightness, consistent winding, outward facing normals, ...)
 if args.check_db:
     if args.object_id is not None:
         if args.check_db.lower() == "o":
@@ -171,9 +226,28 @@ if args.check_db:
     print("# Number of meshes with no outward facing normals:", normals_count, "out of", file_count)
     print("# Number of meshes with non-positive volume:", volume_count, "out of", file_count)
 
+# Terminal command to retrieve shapes similar to a specific mesh
 if args.query:
     if args.object_id is not None:
-        obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
-    else:
-            print(f"No valid input was found.")
-    query(obj)
+        if args.k_value is not None:
+            if args.object_id.isnumeric():
+                obj = Object.load_mesh(list(PROCESSED_MODEL_DIR.glob(f"**/m{args.object_id}.off"))[0])
+            else: # Assume object_id is a path
+                obj = Object.load_mesh(Path(args.object_id))
+                obj.preprocess(VERTEX_COUNT, THRESHOLD)
+
+            if args.query.lower() == "ed":
+                query(obj, 'ed', args.k_value)
+            elif args.query.lower() == "cd":
+                query(obj, 'cd', args.k_value)
+            elif args.query.lower() == "emd":
+                query(obj, 'emd', args.k_value)
+            elif args.query.lower() == "ann":
+                query(obj, 'ann', args.k_value)
+            else:
+                print(f"No valid input was found, {args.query} does not equal `ed`, `cd`, `emd` or `ann`.")
+
+# Terminal command to evaluate the shape retrieval system
+if args.accuracy:
+    if args.accuracy is not None:
+        get_query_accuracy(str(PROCESSED_DB), args.accuracy)

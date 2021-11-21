@@ -8,8 +8,7 @@ from math import sqrt
 
 SAMPLE_SIZE = 10000
 BIN_COUNT = 15
-# Ensure that bin_count actually resolves to bin_count bins
-BIN_COUNT += 1
+BIN_COUNT += 1 # ensure that bin_count actually resolves to bin_count bins
 
 class Object:
     def __init__(self, mesh: trimesh.Trimesh, model_num: int = None, label: str = None):
@@ -22,24 +21,25 @@ class Object:
         self.model_num = model_num
         self.label = label
 
+    # Load a mesh and return it as an Object
     def load_mesh(path: Path):
-        # Load a mesh and return it as an Object
         mesh = trimesh.load(path, force="mesh")
 
-        # Get model num from path
-        model_num = int(path.name.split(".")[0].split("m")[1])
+        if path.name.startswith("m"):
+            # Get model num from path
+            model_num = int(path.name.split(".")[0].split("m")[1])
+        else:
+            model_num = None
 
         # Get label from model num
         label = None
         if model_num != "":
             label = utils.get_label_by_id(model_num)
 
-        # mesh = mesh.convex_hull
-
         return Object(mesh, model_num, label)
 
+    # Retrieve object info and return it
     def get_info(self):
-        # Retrieve object info and return it
         label = self.label
         model_num = self.model_num
         num_vertices = self.mesh.vertices.shape[0]
@@ -99,6 +99,7 @@ class Object:
 
         return model_num, label, num_vertices, num_faces, num_edges, type_faces, bounding_box, barycenter, diagonal, surface, bounding_box_volume, volume, compactness, diameter, eccentricity, A3, D1, D2, D3, D4
 
+    # Calculate feature A3
     def A3(self):
         vertices = self.mesh.vertices
 
@@ -117,6 +118,7 @@ class Object:
 
         return bin_counts
 
+    # Calculate feature D1
     def D1(self):
         vertices = self.mesh.vertices
         centroid = self.mesh.centroid
@@ -135,6 +137,7 @@ class Object:
 
         return bin_counts
 
+    # Calculate feature D2
     def D2(self):
         vertices = self.mesh.vertices
 
@@ -152,6 +155,7 @@ class Object:
 
         return bin_counts
 
+    # Calculate feature D3
     def D3(self):
         vertices = self.mesh.vertices
 
@@ -177,6 +181,7 @@ class Object:
 
         return bin_counts
 
+    # Calculate feature D4
     def D4(self):
         vertices = self.mesh.vertices
 
@@ -203,6 +208,7 @@ class Object:
 
         return bin_counts
 
+    # Run checks on model
     def check_model(self):
         model_num = self.model_num
 
@@ -214,6 +220,7 @@ class Object:
 
         return model_num, watertight, winding, normals, pos_volume
 
+    # Get model's eigenvectors and eigenvalues
     def get_eigen(self):
         # Compute the covariance matrix for mesh
         A = np.transpose(self.mesh.vertices)
@@ -239,6 +246,7 @@ class Object:
 
         return eigenvalues, eigenvectors
 
+    # Preprocess model
     def preprocess(self, vertex_count, threshold):
         self.process()                          # adjust meshes (remove duplicate faces, etc.)
         self.remesh_to(vertex_count, threshold) # remesh
@@ -247,15 +255,18 @@ class Object:
         self.flip()                             # flip based on moment test
         self.scale()                            # scale to unit volume
 
+    # Adjust mesh (remove duplicate faces, etc.)
     def process(self):
         # Remove duplicate faces and vertices
         self.mesh.process()
         self.mesh.remove_duplicate_faces()
 
+    # Center mesh
     def center(self):
         # Center the mesh such that its center becomes [0.0, 0.0, 0.0]
         self.mesh.apply_translation(-1 * self.mesh.centroid)
 
+    # Align mesh
     def align(self):
         # Calculate eigenvectors
         eigenvalues, eigenvectors = self.get_eigen()
@@ -263,9 +274,8 @@ class Object:
         # Align eigenvectors with the XYZ coordinate frame by projecting (Tech Tips 3A)
         self.mesh = trimesh.Trimesh(np.dot(self.mesh.vertices, eigenvectors), self.mesh.faces)
 
+    # Scale the mesh such that it tightly fits in a unit bounding box
     def scale(self):
-        # Scale the mesh such that it tightly fits in a unit bounding box
-
         # Get the longest edge of the current bounding box
         # This is what we will be scaling to
         edges_sizes = self.mesh.bounds[1] - self.mesh.bounds[0]
@@ -280,6 +290,7 @@ class Object:
         # Apply found scale factor
         self.mesh.apply_scale(scale_factor)
 
+    # Flip mesh according to moment test
     def flip(self):
         # Perform flipping test (Tech Tips 3A)
         f = sum((self.mesh.triangles_center)*((self.mesh.triangles_center)**2))
@@ -287,6 +298,7 @@ class Object:
         # Mirror mesh using scaling factors
         self.mesh = trimesh.Trimesh((self.mesh.vertices * np.sign(f)), self.mesh.faces)
 
+    # Remesh mesh
     def remesh_to(self, vertex_count, threshold):
         # Remesh the mesh such that the mesh has vertex_count +/- threshold vertices
         while len(self.mesh.vertices) > vertex_count + threshold or len(self.mesh.vertices) < vertex_count - threshold:
@@ -308,6 +320,6 @@ class Object:
         new_face_count = vector_count * (len(self.mesh.faces) / len(self.mesh.vertices))
         self.mesh = self.mesh.simplify_quadratic_decimation(new_face_count)
 
+    # Save a mesh to a file
     def save_mesh(self, path: Path):
-        # Save a mesh to a file
         self.mesh.export(path, "off")
