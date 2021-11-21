@@ -27,8 +27,8 @@ parser.add_argument("-i", "--info", choices=["o", "p"], help="view info of selec
 parser.add_argument("-v", "--view", choices=["o", "p"], help="view selected model. Usage: {database} {model number}.")
 parser.add_argument("-k", "--check-model", choices=["o", "p"], help="check issues of selected model. Usage: {database} {model number}.")
 parser.add_argument("-K", "--check-db", choices=["o", "p"], help="check issues of entire dataset. Usage: {database} {model number}.")
-parser.add_argument("-q", "--query", choices=["ed", "cd", "emd", "ann"], help="find similar shapes ('ed' for Euclidean distance, 'cd' for Cosine distance, 'emd' for Earth Mover's distance, 'ann' for ANN (on Manhattan distance). Usage: {metric} {model number} {k value}.")
-parser.add_argument("-a", "--accuracy", type=int, help="get accuracy of distance functions.")
+parser.add_argument("-q", "--query", choices=["ed", "cd", "emd", "ann"], help="find similar shapes ('ed' for Euclidean distance, 'cd' for Cosine distance, 'emd' for Earth Mover's distance, 'ann' for ANN on Manhattan distance). Usage: {metric} {model number} {k value}.")
+parser.add_argument("-a", "--accuracy", action="store_true", help="get accuracy of distance functions.")
 
 args = parser.parse_args()
 
@@ -77,7 +77,7 @@ if args.object_id is None:
     exit()
 
 if args.k_value is None:
-    if args.query:
+    if args.query or args.accuracy:
         print("No k-value was selected")
     exit()
 
@@ -249,5 +249,5 @@ if args.query:
 
 # Terminal command to evaluate the shape retrieval system
 if args.accuracy:
-    if args.accuracy is not None:
-        get_query_accuracy(str(PROCESSED_DB), args.accuracy)
+    if args.k_value is not None:
+        get_query_accuracy(str(PROCESSED_DB), args.k_value)
