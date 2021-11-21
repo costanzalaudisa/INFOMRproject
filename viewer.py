@@ -48,7 +48,7 @@ class Viewer:
 
         self.has_quit = False
 
-        caption = f"Model # {self.object.model_num} - label: {self.object.label}"
+        caption = f"Model #{self.object.model_num} - label: {self.object.label}"
 
         # Initialize a window
         pg.init()

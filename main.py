@@ -6,7 +6,7 @@ from stats import plot_stats
 from object import Object
 from viewer import Viewer
 from pathlib import Path
-from query import query, normalize, build_ann, get_query_accuracy
+from query import query, get_query_accuracy
 
 import matplotlib.pyplot as plt
 
@@ -32,6 +32,7 @@ parser.add_argument("-a", "--accuracy", type=int, help="get accuracy of distance
 
 args = parser.parse_args()
 
+# Terminal command to start original dataset's pre-processing and cleaning
 if args.pre_process:
      # Get all off_files in this directory
     off_files = list(ORIGINAL_MODEL_DIR.glob("**/*.off"))
@@ -43,9 +44,11 @@ if args.pre_process:
         object.preprocess(VERTEX_COUNT, THRESHOLD)
         object.save_mesh(PROCESSED_MODEL_DIR / f.name)
 
+# Terminal command to extract the dataset's classes
 if args.generate_classes:
     define_classes(list(Path("./classes").iterdir()))
 
+# Terminal command to gather stats on the original or processed dataset
 if args.plot_stats:
     if args.plot_stats.lower() == "o":
         plot_stats(ORIGINAL_DB)
@@ -54,6 +57,7 @@ if args.plot_stats:
     else:
         print(f"No valid input was found, {args.plot_stats} does not equal, `o` or `p`.")
 
+# Terminal command to generate feature CSV for either original or processed dataset
 if args.generate_database:
     if args.generate_database.lower() == "o":
         generate_db(ORIGINAL_MODEL_DIR, ORIGINAL_DB)
@@ -68,15 +72,16 @@ if args.generate_database:
 obj = None
 
 if args.object_id is None:
-    if args.info or args.view or args.query:
+    if args.info or args.view or args.check_model or args.query:
         print("No object was selected")
     exit()
 
 if args.k_value is None:
-    if args.info or args.view or args.query:
+    if args.query:
         print("No k-value was selected")
     exit()
 
+# Terminal command to retrieve a mesh's info and features
 if args.info:
     if args.object_id is not None:
         if args.object_id.isnumeric():
@@ -109,17 +114,29 @@ if args.info:
     print("Number of edges:", num_edges)
     print("Type of faces:", type_faces)
     print("Bounding box:", bounding_box)
+
     print("\r")
-    print("################")
-    print("### FEATURES ###")
-    print("################")
+    print("#############################")
+    print("### SINGLE-VALUE FEATURES ###")
+    print("#############################")
     print("Surface area:", surface)
     print("Bounding box volume:", bounding_box_volume)
     print("Mesh volume:", volume)
     print("Compactness:", compactness)
     print("Diameter:", diameter)
-    print("Eccentricity", eccentricity)
+    print("Eccentricity:", eccentricity)
 
+    print("\r")
+    print("##########################")
+    print("### HISTOGRAM FEATURES ###")
+    print("##########################")
+    print("A3:", A3)
+    print("D1:", D1)
+    print("D2:", D2)
+    print("D3:", D3)
+    print("D4:", D4)
+
+# Terminal command to visualize a mesh
 if args.view:
     if args.object_id is not None:
         if args.object_id.isnumeric():
@@ -143,6 +160,7 @@ if args.view:
     viewer = Viewer(obj)
     viewer.mainLoop()
 
+# Terminal command to run various checks on a mesh (watertightness, consistent winding, outward facing normals, ...)
 if args.check_model:
     if args.object_id is not None:
         if args.object_id.isnumeric():
@@ -171,6 +189,7 @@ if args.check_model:
     print("Does mesh have outward facing normals?", watertight)
     print("Does mesh have positive volume?", pos_volume)
 
+# Terminal command to run various checks on the entire database (watertightness, consistent winding, outward facing normals, ...)
 if args.check_db:
     if args.object_id is not None:
         if args.check_db.lower() == "o":
@@ -207,6 +226,7 @@ if args.check_db:
     print("# Number of meshes with no outward facing normals:", normals_count, "out of", file_count)
     print("# Number of meshes with non-positive volume:", volume_count, "out of", file_count)
 
+# Terminal command to retrieve shapes similar to a specific mesh
 if args.query:
     if args.object_id is not None:
         if args.k_value is not None:
@@ -227,6 +247,7 @@ if args.query:
             else:
                 print(f"No valid input was found, {args.query} does not equal `ed`, `cd`, `emd` or `ann`.")
 
+# Terminal command to evaluate the shape retrieval system
 if args.accuracy:
     if args.accuracy is not None:
         get_query_accuracy(str(PROCESSED_DB), args.accuracy)

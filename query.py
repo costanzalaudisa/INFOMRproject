@@ -15,6 +15,7 @@ from annoy import AnnoyIndex
 from object import Object
 from viewer import Viewer
 
+# Normalize and weight features
 def normalize(df):
     # List string to numpy array
     for col in ["Bounding box", "Barycenter", "A3", "D1", "D2", "D3", "D4"]:
@@ -58,6 +59,7 @@ def normalize(df):
 
     return df
 
+# Build ANN engine
 def build_ann(metric):
     # Gather processed dataset and normalize
     df = pd.read_csv("./psb_proc.csv")
@@ -83,9 +85,9 @@ def build_ann(metric):
 
     return ann
 
- #print(ann.get_nns_by_item(MODEL_NUM, K, include_distances=True)) # will find the K nearest neighbors
-
+# Retrieve similar shapes according to desired metric and k
 def query(obj, dist, k):
+    df = pd.read_csv("./psb_proc.csv")
     K = k
     view_object = True
 
@@ -93,18 +95,14 @@ def query(obj, dist, k):
         viewer = Viewer(obj)
         viewer.mainLoop()
 
+    # If there is no label or model number, it's an external shape -> add it to the dataset
     if obj.label is None:
-        obj.label = "unkown"
+        obj.label = "N/A"
 
     if obj.model_num is None:
-        obj.model_num = 1814
-
-    print("### QUERY SHAPE: model #" + str(obj.model_num) + " - label: " + obj.label + " ###")
-    print("\r")
-
-    # Normalize features and gather model's feature_vector
-    df = pd.read_csv("./psb_proc.csv")
-    if obj.model_num == 9999:
+        obj.model_num = len(df)
+    
+    if obj.model_num == len(df):
         df2 = pd.DataFrame([obj.get_info()], columns=['Model number', 'Label', 'Number of vertices', "Number of faces", "Number of edges", "Type of faces", "Bounding box", "Barycenter", "Diagonal", "Surface", "Bounding box volume", "Convex hull volume", "Compactness", "Diameter", "Eccentricity", "A3", "D1", "D2", "D3", "D4"])
         df2.to_csv("tmp.csv", index=False)
         df2 = pd.read_csv("tmp.csv")
@@ -112,6 +110,8 @@ def query(obj, dist, k):
         df = df.append(df2)
         df = df.sort_values("Model number")
         df.reset_index(drop=True, inplace=True)
+    
+    # Normalize features and gather model's feature_vector
     df = normalize(df)
     fv = df.loc[df['Model number'] == obj.model_num]
     feature_vector = np.array([fv['Surface'].iloc[0], fv['Compactness'].iloc[0], fv['Bounding box volume'].iloc[0], fv['Convex hull volume'].iloc[0], fv['Diameter'].iloc[0], fv['Eccentricity'].iloc[0], *fv['A3'].iloc[0], *fv['D1'].iloc[0], *fv['D2'].iloc[0], *fv['D3'].iloc[0], *fv['D4'].iloc[0]])
@@ -126,6 +126,9 @@ def query(obj, dist, k):
     ANN = a.get_nns_by_item(obj.model_num, K+1, include_distances=True)
     ANN_top_k = df[df['Model number'].isin(ANN[0])]
     ANN_top_k = ANN_top_k[ANN_top_k["Model number"] != obj.model_num]
+
+    print("### QUERY SHAPE: model #" + str(obj.model_num) + " - label: " + obj.label + " ###")
+    print("\r")
 
     # Take the K nearest models and display their distance from query model (according to requested metric)
     if dist == 'ed':
@@ -167,6 +170,7 @@ def query(obj, dist, k):
         viewer = Viewer(obj)
         viewer.mainLoop()
 
+# Calculate accuracies for all metrics
 def get_query_accuracy(db_path, k):
     print("Calculating accuracy for k=" + str(k) + "... (Warning: might take several minutes.)")
 

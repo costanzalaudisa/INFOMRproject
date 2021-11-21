@@ -3,16 +3,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
+# Plot histograms of specified value
 def plot(df, value):
-    # Plot histograms of specified value
     plt.figure(figsize=(18,6))
     plt.xlabel(value)
     plt.ylabel('count')
     plt.hist(df[value], bins=25, rwidth = 0.9) # recommended 10-25 bins
     plt.show()
 
+# Gather database statistics and run checks
 def plot_stats(db_path):
-    # Gather database statistics
     df = pd.read_csv(db_path)
     stats = df[df.columns.difference(["Model Number"])].describe()
     print('\r')
@@ -47,6 +47,7 @@ def plot_stats(db_path):
     check_scaling(df)
     features_stats(df)
 
+# Count database's outliers
 def count_outliers(df):
     # Gather models with minimum and maximum values
     outliers = []
@@ -103,6 +104,7 @@ def count_outliers(df):
     outliers = sorted(list(set(outliers)))
     print("\nDatabase outliers:", outliers)
 
+# Check if centering process was successful
 def check_centering(df):
     # Get distance from origin to check centering process
     print("\r")
@@ -122,6 +124,7 @@ def check_centering(df):
    
     plot(df, "Distance from origin")
 
+# Check if scaling process was successful
 def check_scaling(df):
     # Get bounding box diagonal and max edge to check scaling process
     print("\r")
@@ -148,6 +151,7 @@ def check_scaling(df):
     plt.legend(loc="upper left")
     plt.show()
 
+# Gather feature's stats
 def features_stats(df):
     # Get descriptors statistics
     print("\r")
