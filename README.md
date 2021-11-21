@@ -8,7 +8,7 @@ The system was implemented in Python 3.9, so ensure the correct version of Pytho
 
 ### Libraries installation
 
-The list of required libraries can be found in the `requirements.txt` file. Most of the libraries can be easily imported by running `pip install [library name]` in a terminal (ensure Pip is correctly installed), except for the Open3D wheel which must be installed directly from Open3D, since no Python 3.9 release exists yet on PyPi.
+The list of required libraries can be found in the `requirements.txt` file. All libraries can be easily installed by running `pip install -r requirements.txt` in a terminal (ensure Pip is correctly installed), except for the Open3D library which must be installed manually, since no Python 3.9 release exists yet on PyPi.
 
 #### Open3D installation on Windows
 `pip install https://storage.googleapis.com/open3d-releases-master/python-wheels/open3d-0.13.0+61646ce-cp39-cp39-win_amd64.whl`
